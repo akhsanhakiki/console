@@ -7,6 +7,7 @@ import {
 import React, { useState, useRef, useEffect } from "react";
 import { HiOutlineSlash } from "react-icons/hi2";
 import { HiChevronDown } from "react-icons/hi";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
 
 interface Workspace {
   id: number;
@@ -14,27 +15,6 @@ interface Workspace {
   organizationID: string;
   lastUpdated: string;
 }
-
-const workspaceList = [
-  {
-    id: 1,
-    name: "Workspace A",
-    organizationID: "org_2ssLYh6rviLkJAcZyBtyfsZ8nWh",
-    lastUpdated: "2024-01-01",
-  },
-  {
-    id: 2,
-    name: "Workspace B",
-    organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-    lastUpdated: "2024-01-01",
-  },
-  {
-    id: 3,
-    name: "Workspace C",
-    organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-    lastUpdated: "2024-01-01",
-  },
-];
 
 const WorkspaceMng = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,24 +24,30 @@ const WorkspaceMng = () => {
   const { organization } = useOrganization();
   const { userMemberships, isLoaded } = useOrganizationList();
 
-  // Filter workspaces based on current organization
-  const filteredWorkspaces = workspaceList.filter(
-    (workspace) => workspace.organizationID === organization?.id
-  );
+  // Get workspace store state and actions
+  const {
+    workspaces,
+    selectedWorkspace,
+    isLoading,
+    error,
+    fetchWorkspaces,
+    setWorkspace,
+  } = useWorkspaceStore();
 
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(
-    filteredWorkspaces[0] || null
-  );
-
-  // Update active workspace when organization changes
+  // Fetch workspaces when organization changes
   useEffect(() => {
-    if (organization && filteredWorkspaces.length > 0) {
-      setActiveWorkspace(filteredWorkspaces[0]);
+    if (organization?.id) {
+      fetchWorkspaces(organization.id);
     }
   }, [organization?.id]);
 
+  // Find active workspace
+  const activeWorkspace =
+    workspaces.find((w) => w.id.toString() === selectedWorkspace) ||
+    workspaces[0];
+
   const handleWorkspaceSelect = (workspace: Workspace) => {
-    setActiveWorkspace(workspace);
+    setWorkspace(workspace.id.toString());
     setIsOpen(false);
   };
 
@@ -82,7 +68,25 @@ const WorkspaceMng = () => {
   }, []);
 
   const WorkspacePanel = () => {
-    if (!organization || filteredWorkspaces.length === 0) {
+    if (isLoading) {
+      return (
+        <div className="absolute top-full mt-1 w-48 flex flex-col justify-center items-center gap-1 bg-background rounded-md shadow-md border border-foreground-200 py-2">
+          <p className="text-xs text-foreground-500 px-4 py-2">Loading...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="absolute top-full mt-1 w-48 flex flex-col justify-center items-center gap-1 bg-background rounded-md shadow-md border border-foreground-200 py-2">
+          <p className="text-xs text-foreground-500 px-4 py-2">
+            Error loading workspaces
+          </p>
+        </div>
+      );
+    }
+
+    if (!organization || workspaces.length === 0) {
       return (
         <div className="absolute top-full mt-1 w-48 flex flex-col justify-center items-center gap-1 bg-background rounded-md shadow-md border border-foreground-200 py-2">
           <p className="text-xs text-foreground-500 px-4 py-2">
@@ -94,7 +98,7 @@ const WorkspaceMng = () => {
 
     return (
       <div className="absolute top-full mt-1 w-48 flex flex-col justify-center items-center gap-1 bg-background rounded-md shadow-md border border-foreground-200 py-2">
-        {filteredWorkspaces.map((workspace) => (
+        {workspaces.map((workspace) => (
           <div
             key={workspace.id}
             className={`flex flex-row items-center w-full gap-1 px-4 py-2 hover:bg-foreground-100 cursor-pointer ${

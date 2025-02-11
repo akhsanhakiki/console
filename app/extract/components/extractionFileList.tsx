@@ -251,11 +251,10 @@ const ExtractionFileList = () => {
   const topContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex justify-between gap-3 items-end">
-          <Tabs variant="underlined" className="font-poppins">
-            <Tab key="Draft" title="Draft" />
-            <Tab key="Published" title="Published" />
-          </Tabs>
+        <div className="flex justify-between gap-3 items-center">
+          <h2 className="text-sm font-semibold font-poppins text-foreground-700">
+            Publised Extractors
+          </h2>
           <Input
             isClearable
             className="w-full sm:max-w-[20%]"

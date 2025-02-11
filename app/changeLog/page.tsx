@@ -149,7 +149,7 @@ const ChangeLog = () => {
       </h1>
       <div className="w-full flex flex-col gap-4 h-[calc(100vh-7rem)] overflow-scroll">
         {changelogCards.map((card) => (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4" key={card.date}>
             <ChangelogCard key={card.date} {...card} />
             <div className="h-1 border-b border-foreground-200"></div>
           </div>

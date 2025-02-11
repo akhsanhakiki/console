@@ -70,7 +70,7 @@ const Extract = () => {
         Extract
       </h1>
       <div className="flex flex-col gap-4 w-full h-full flex-grow">
-        <h2 className="text-base font-semibold font-poppins text-foreground-900">
+        <h2 className="text-base font-semibold font-poppins text-foreground-700">
           New
         </h2>
         <PipelineList cards={pipelineCards} />
