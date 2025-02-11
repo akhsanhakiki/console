@@ -47,4 +47,64 @@ export const handlers = [
       },
     });
   }),
+
+  http.get("/api/dashboard", async ({ request }) => {
+    const url = new URL(request.url);
+    const orgId = url.searchParams.get("orgId");
+    const workspaceId = url.searchParams.get("workspaceId");
+
+    await delay(500);
+
+    const dashboard = [
+      {
+        organizationID: "org_2ssLYh6rviLkJAcZyBtyfsZ8nWh",
+        workspaceID: 1,
+        documentProcessed: 100,
+        pipelineCreated: 120,
+        documentCreated: 130,
+        schemaCreated: 140,
+      },
+      {
+        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
+        workspaceID: 2,
+        documentProcessed: 200,
+        pipelineCreated: 220,
+        documentCreated: 230,
+        schemaCreated: 240,
+      },
+      {
+        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
+        workspaceID: 3,
+        documentProcessed: 300,
+        pipelineCreated: 320,
+        documentCreated: 330,
+        schemaCreated: 340,
+      },
+      {
+        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
+        workspaceID: 4,
+        documentProcessed: 400,
+        pipelineCreated: 420,
+        documentCreated: 430,
+      },
+    ];
+
+    const filteredDashboard = dashboard.filter((d) => {
+      if (orgId && workspaceId) {
+        return (
+          d.organizationID === orgId && d.workspaceID === Number(workspaceId)
+        );
+      }
+      if (orgId) {
+        return d.organizationID === orgId;
+      }
+      return true;
+    });
+
+    return HttpResponse.json(filteredDashboard, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }),
 ];

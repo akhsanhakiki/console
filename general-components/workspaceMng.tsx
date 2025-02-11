@@ -32,7 +32,15 @@ const WorkspaceMng = () => {
     error,
     fetchWorkspaces,
     setWorkspace,
+    initializeWorkspace,
   } = useWorkspaceStore();
+
+  // Initialize workspace when organization changes
+  useEffect(() => {
+    if (organization?.id) {
+      initializeWorkspace(organization.id);
+    }
+  }, [organization?.id]);
 
   // Fetch workspaces when organization changes
   useEffect(() => {
@@ -104,7 +112,7 @@ const WorkspaceMng = () => {
             className={`flex flex-row items-center w-full gap-1 px-4 py-2 hover:bg-foreground-100 cursor-pointer ${
               activeWorkspace?.id === workspace.id ? "bg-foreground-50" : ""
             }`}
-            onClick={() => handleWorkspaceSelect(workspace)}
+            onClick={() => handleWorkspaceSelect(workspace as Workspace)}
           >
             <p className="text-xs font-medium text-foreground-500 font-poppins">
               {workspace.name}

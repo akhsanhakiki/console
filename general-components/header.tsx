@@ -12,7 +12,6 @@ export const HeaderBar = () => {
         <div className="flex justify-center w-3/5 ">
           <WorkspaceMng />
         </div>
-
         <div className="flex items-center justify-end w-1/5">
           <SignedOut>
             <SignInButton />

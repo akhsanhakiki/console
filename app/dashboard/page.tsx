@@ -1,33 +1,70 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { Tabs, Tab, Tooltip } from "@heroui/react";
 import TotalProcessingTimeIcon from "@/public/images/icons/totalProcessingTimeIcon";
 import ExtractionQuotaIcon from "@/public/images/icons/extractionQuotaIcon";
 import ExtractedPageIcon from "@/public/images/icons/extractedPageIcon";
 import AvgTimerperPageIcon from "@/public/images/icons/avgTimerperPageIcon";
 import { FiInfo } from "react-icons/fi";
+import { useDashboardStore } from "@/stores/dashboardStore";
+import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useOrganization } from "@clerk/nextjs";
 
 const Dashboard = () => {
+  const { organization } = useOrganization();
+  const {
+    selectedWorkspace,
+    workspaces,
+    isLoading: isWorkspaceLoading,
+  } = useWorkspaceStore();
+  const {
+    documentProcessed,
+    pipelineCreated,
+    documentCreated,
+    schemaCreated,
+    isLoading: isDashboardLoading,
+    error,
+    fetchDashboard,
+  } = useDashboardStore();
+
+  useEffect(() => {
+    if (organization?.id && selectedWorkspace) {
+      fetchDashboard(organization.id, Number(selectedWorkspace));
+    }
+  }, [organization?.id, selectedWorkspace, fetchDashboard]);
+
+  if (isWorkspaceLoading || isDashboardLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!organization?.id || !selectedWorkspace) {
+    return <div>Please select an organization and workspace</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
   // Store the card data in an array
   const cardData = [
     {
       title: "Documents Processed",
-      value: 420,
+      value: documentProcessed,
       description: "Total documents processed this month.",
     },
     {
       title: "Pipeline Created",
-      value: 24,
+      value: pipelineCreated,
       description: "Pipelines created by users.",
     },
     {
       title: "Doc type Created",
-      value: 48,
+      value: documentCreated,
       description: "Document types created by users.",
     },
     {
       title: "Schema Created",
-      value: 30,
+      value: schemaCreated,
       description: "Schema created by users.",
     },
   ];
