@@ -1,6 +1,10 @@
 import React from "react";
 
-const docTypeIconOut = () => {
+interface DocTypeIconOutProps {
+  className?: string;
+}
+
+const DocTypeIconOut: React.FC<DocTypeIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const docTypeIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5375_15468"
@@ -32,4 +37,4 @@ const docTypeIconOut = () => {
   );
 };
 
-export default docTypeIconOut;
+export default DocTypeIconOut;

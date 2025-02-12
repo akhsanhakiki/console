@@ -8,6 +8,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { HiOutlineSlash } from "react-icons/hi2";
 import { HiChevronDown } from "react-icons/hi";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useRouter } from "next/navigation";
+import { Divider } from "@heroui/react";
 
 interface Workspace {
   id: number;
@@ -17,6 +19,7 @@ interface Workspace {
 }
 
 const WorkspaceMng = () => {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -35,10 +38,14 @@ const WorkspaceMng = () => {
     initializeWorkspace,
   } = useWorkspaceStore();
 
-  // Initialize workspace when organization changes
+  // Effect to handle organization changes
   useEffect(() => {
     if (organization?.id) {
       initializeWorkspace(organization.id);
+      // Reset workspace selection when organization changes
+      setWorkspace("");
+      // Redirect to workspace selection page when organization changes
+      router.push("/workspace");
     }
   }, [organization?.id]);
 
@@ -49,16 +56,19 @@ const WorkspaceMng = () => {
     }
   }, [organization?.id]);
 
-  // Find active workspace
+  // Find active workspace based on selectedWorkspace
   const activeWorkspace =
     workspaces.find((w) => w.id.toString() === selectedWorkspace) ||
     workspaces[0];
 
+  // Handle workspace selection and redirect to dashboard
   const handleWorkspaceSelect = (workspace: Workspace) => {
     setWorkspace(workspace.id.toString());
-    setIsOpen(false);
+    // Redirect to the dashboard immediately after selecting the workspace
+    router.push("/dashboard");
   };
 
+  // Effect to handle clicks outside the panel to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -75,6 +85,7 @@ const WorkspaceMng = () => {
     };
   }, []);
 
+  // Component to render the workspace selection panel
   const WorkspacePanel = () => {
     if (isLoading) {
       return (
@@ -119,6 +130,18 @@ const WorkspaceMng = () => {
             </p>
           </div>
         ))}
+        <Divider className="my-1" />
+        <div
+          className="flex flex-row items-center w-full gap-1 px-4 py-2 hover:bg-foreground-100 cursor-pointer"
+          onClick={() => {
+            router.push("/workspace");
+            setIsOpen(false);
+          }}
+        >
+          <p className="text-xs font-medium text-foreground-500 font-poppins">
+            View All Workspaces
+          </p>
+        </div>
       </div>
     );
   };
@@ -148,9 +171,7 @@ const WorkspaceMng = () => {
             {activeWorkspace?.name || "Select Workspace"}
           </p>
           <HiChevronDown
-            className={`w-4 h-4 text-foreground-500 transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
+            className={`w-4 h-4 text-foreground-500 transition-transform duration-200`}
           />
         </div>
         {isOpen && <WorkspacePanel />}

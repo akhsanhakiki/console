@@ -1,6 +1,10 @@
 import React from "react";
 
-const composerIconOut = () => {
+interface ComposerIconOutProps {
+  className?: string;
+}
+
+const ComposerIconOut: React.FC<ComposerIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const composerIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5374_17857"
@@ -32,4 +37,4 @@ const composerIconOut = () => {
   );
 };
 
-export default composerIconOut;
+export default ComposerIconOut;

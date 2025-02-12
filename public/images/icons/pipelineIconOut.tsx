@@ -1,6 +1,10 @@
 import React from "react";
 
-const pipelineIconOut = () => {
+interface PipelineIconOutProps {
+  className?: string;
+}
+
+const PipelineIconOut: React.FC<PipelineIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const pipelineIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4834_12173"
@@ -36,4 +41,4 @@ const pipelineIconOut = () => {
   );
 };
 
-export default pipelineIconOut;
+export default PipelineIconOut;

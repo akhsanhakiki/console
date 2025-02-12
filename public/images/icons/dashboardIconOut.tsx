@@ -1,6 +1,10 @@
 import React from "react";
 
-const dashboardIconOut = () => {
+interface DashboardIconOutProps {
+  className?: string;
+}
+
+const DashboardIconOut: React.FC<DashboardIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const dashboardIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5374_16890"
@@ -32,4 +37,4 @@ const dashboardIconOut = () => {
   );
 };
 
-export default dashboardIconOut;
+export default DashboardIconOut;

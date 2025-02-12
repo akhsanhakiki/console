@@ -1,6 +1,10 @@
 import React from "react";
 
-const integrationicon = () => {
+interface IntegrationIconProps {
+  className?: string;
+}
+
+const IntegrationIcon: React.FC<IntegrationIconProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const integrationicon = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4429_928"
@@ -32,4 +37,4 @@ const integrationicon = () => {
   );
 };
 
-export default integrationicon;
+export default IntegrationIcon;

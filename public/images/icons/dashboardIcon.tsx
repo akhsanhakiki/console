@@ -1,6 +1,10 @@
 import React from "react";
 
-const dashboardIcon = () => {
+interface DashboardIconProps {
+  className?: string;
+}
+
+const DashboardIcon: React.FC<DashboardIconProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const dashboardIcon = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4418_154591"
@@ -32,4 +37,4 @@ const dashboardIcon = () => {
   );
 };
 
-export default dashboardIcon;
+export default DashboardIcon;

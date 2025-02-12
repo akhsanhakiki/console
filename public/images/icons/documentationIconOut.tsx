@@ -1,6 +1,12 @@
 import React from "react";
 
-const documentationIconOut = () => {
+interface DocumentationIconOutProps {
+  className?: string;
+}
+
+const DocumentationIconOut: React.FC<DocumentationIconOutProps> = ({
+  className,
+}) => {
   return (
     <div>
       <svg
@@ -9,6 +15,7 @@ const documentationIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4746_33918"
@@ -32,4 +39,4 @@ const documentationIconOut = () => {
   );
 };
 
-export default documentationIconOut;
+export default DocumentationIconOut;

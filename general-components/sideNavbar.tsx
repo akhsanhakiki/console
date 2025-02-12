@@ -325,10 +325,7 @@ const SideNavbar = () => {
                               : item.icon,
                             {
                               className: clsx(
-                                "flex-shrink-0 w-5 h-5 text-foreground-600",
-                                {
-                                  "mr-3": isExpanded,
-                                }
+                                "flex-shrink-0 w-5 h-5 text-foreground-900"
                               ),
                             }
                           )
@@ -339,7 +336,6 @@ const SideNavbar = () => {
                             width={20}
                             height={20}
                             className={getIconStyles(isActive, isExpanded)}
-                            style={{ width: "auto", height: "auto" }}
                             loading="eager"
                             priority={true}
                           />
@@ -375,9 +371,8 @@ const SideNavbar = () => {
                           isActive ? item.activeIcon : item.icon,
                           {
                             className: clsx(
-                              "flex-shrink-0 w-5 h-5 text-foreground-600",
+                              "flex-shrink-0 w-5 h-5 text-foreground-900",
                               {
-                                "mr-3": isExpanded,
                                 "opacity-50": item.disabled,
                               }
                             ),

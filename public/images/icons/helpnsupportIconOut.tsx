@@ -1,6 +1,12 @@
 import React from "react";
 
-const helpnsupportIconOut = () => {
+interface HelpNSupportIconOutProps {
+  className?: string;
+}
+
+const HelpNSupportIconOut: React.FC<HelpNSupportIconOutProps> = ({
+  className,
+}) => {
   return (
     <div>
       <svg
@@ -9,6 +15,7 @@ const helpnsupportIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5374_17885"
@@ -32,4 +39,4 @@ const helpnsupportIconOut = () => {
   );
 };
 
-export default helpnsupportIconOut;
+export default HelpNSupportIconOut;

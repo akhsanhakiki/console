@@ -1,6 +1,10 @@
 import React from "react";
 
-const settingsIcon = () => {
+interface SettingsIconProps {
+  className?: string;
+}
+
+const SettingsIcon: React.FC<SettingsIconProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const settingsIcon = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4429_984"
@@ -32,4 +37,4 @@ const settingsIcon = () => {
   );
 };
 
-export default settingsIcon;
+export default SettingsIcon;

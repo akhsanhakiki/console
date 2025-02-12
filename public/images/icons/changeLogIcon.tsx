@@ -1,6 +1,10 @@
 import React from "react";
 
-const changeLogIcon = () => {
+interface ChangeLogIconProps {
+  className?: string;
+}
+
+const ChangeLogIcon: React.FC<ChangeLogIconProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const changeLogIcon = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_4746_33919"
@@ -32,4 +37,4 @@ const changeLogIcon = () => {
   );
 };
 
-export default changeLogIcon;
+export default ChangeLogIcon;

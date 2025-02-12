@@ -1,14 +1,19 @@
 import React from "react";
 
-const scanIconOut = () => {
+interface ScanIconOutProps {
+  className?: string;
+}
+
+const ScanIconOut: React.FC<ScanIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
-        width="24"
-        height="24"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5374_16896"
@@ -32,4 +37,4 @@ const scanIconOut = () => {
   );
 };
 
-export default scanIconOut;
+export default ScanIconOut;

@@ -1,6 +1,10 @@
 import React from "react";
 
-const manageIconOut = () => {
+interface ManageIconOutProps {
+  className?: string;
+}
+
+const ManageIconOut: React.FC<ManageIconOutProps> = ({ className }) => {
   return (
     <div>
       <svg
@@ -9,6 +13,7 @@ const manageIconOut = () => {
         viewBox="0 0 24 24"
         fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
       >
         <mask
           id="mask0_5374_16902"
@@ -32,4 +37,4 @@ const manageIconOut = () => {
   );
 };
 
-export default manageIconOut;
+export default ManageIconOut;
