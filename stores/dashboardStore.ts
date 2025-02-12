@@ -1,70 +1,36 @@
 import { create } from "zustand";
 
-interface Dashboard {
+interface DashboardData {
+  organizationID: string;
+  workspaceID: number;
   documentProcessed: number;
   pipelineCreated: number;
   documentCreated: number;
-  schemaCreated: number;
-  error: string | null;
+  schemaCreated?: number;
 }
 
-type DashboardState = {
-  documentProcessed: number;
-  pipelineCreated: number;
-  documentCreated: number;
-  schemaCreated: number;
+interface DashboardStore {
+  dashboardData: DashboardData | null;
   isLoading: boolean;
   error: string | null;
-  setDocumentProcessed: (documentProcessed: number) => void;
-  setPipelineCreated: (pipelineCreated: number) => void;
-  setDocumentCreated: (documentCreated: number) => void;
-  setSchemaCreated: (schemaCreated: number) => void;
-  fetchDashboard: (orgId: string, workspaceId: number) => Promise<void>;
-};
+  fetchDashboardData: (orgId: string, workspaceId: string) => Promise<void>;
+}
 
-export const useDashboardStore = create<DashboardState>((set) => ({
-  documentProcessed: 0,
-  pipelineCreated: 0,
-  documentCreated: 0,
-  schemaCreated: 0,
+export const useDashboardStore = create<DashboardStore>((set) => ({
+  dashboardData: null,
   isLoading: false,
   error: null,
-  setDocumentProcessed: (documentProcessed) => set({ documentProcessed }),
-  setPipelineCreated: (pipelineCreated) => set({ pipelineCreated }),
-  setDocumentCreated: (documentCreated) => set({ documentCreated }),
-  setSchemaCreated: (schemaCreated) => set({ schemaCreated }),
-  fetchDashboard: async (orgId: string, workspaceId: number) => {
+  fetchDashboardData: async (orgId, workspaceId) => {
+    set({ isLoading: true, error: null });
     try {
-      set({ isLoading: true, error: null });
-      const res = await fetch(
+      const response = await fetch(
         `/api/dashboard?orgId=${orgId}&workspaceId=${workspaceId}`
       );
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch dashboard data");
-      }
-
-      const data = await res.json();
-      // Since we're filtering by org and workspace, we expect one result
-      const dashboardData = data[0] || {
-        documentProcessed: 0,
-        pipelineCreated: 0,
-        documentCreated: 0,
-        schemaCreated: 0,
-      };
-
-      set({
-        documentProcessed: dashboardData.documentProcessed,
-        pipelineCreated: dashboardData.pipelineCreated,
-        documentCreated: dashboardData.documentCreated,
-        schemaCreated: dashboardData.schemaCreated,
-        isLoading: false,
-      });
+      if (!response.ok) throw new Error("Failed to fetch dashboard data");
+      const data = await response.json();
+      set({ dashboardData: data[0], isLoading: false });
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : "An error occurred",
-        isLoading: false,
-      });
+      set({ error: (error as Error).message, isLoading: false });
     }
   },
 }));

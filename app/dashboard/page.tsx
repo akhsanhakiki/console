@@ -18,27 +18,48 @@ const Dashboard = () => {
     isLoading: isWorkspaceLoading,
   } = useWorkspaceStore();
   const {
-    documentProcessed,
-    pipelineCreated,
-    documentCreated,
-    schemaCreated,
+    dashboardData,
     isLoading: isDashboardLoading,
     error,
-    fetchDashboard,
+    fetchDashboardData,
   } = useDashboardStore();
 
   useEffect(() => {
-    if (organization?.id && selectedWorkspace) {
-      fetchDashboard(organization.id, Number(selectedWorkspace));
+    const shouldFetchData = organization?.id && selectedWorkspace;
+
+    if (shouldFetchData && !dashboardData) {
+      console.log("Fetching dashboard data...");
+      fetchDashboardData(organization.id, selectedWorkspace);
     }
-  }, [organization?.id, selectedWorkspace, fetchDashboard]);
+  }, [organization?.id, selectedWorkspace, dashboardData]);
+
+  // Add a check for workspaces
+  if (workspaces.length === 0) {
+    return <div>No workspaces available</div>;
+  }
 
   if (isWorkspaceLoading || isDashboardLoading) {
     return <div>Loading...</div>;
   }
 
   if (!organization?.id || !selectedWorkspace) {
-    return <div>Please select an organization and workspace</div>;
+    return (
+      <div>
+        Please select an organization and workspace
+        {/* Debug info */}
+        <pre>
+          {JSON.stringify(
+            {
+              orgId: organization?.id,
+              selectedWorkspace,
+              workspacesCount: workspaces.length,
+            },
+            null,
+            2
+          )}
+        </pre>
+      </div>
+    );
   }
 
   if (error) {
@@ -49,22 +70,22 @@ const Dashboard = () => {
   const cardData = [
     {
       title: "Documents Processed",
-      value: documentProcessed,
+      value: dashboardData?.documentProcessed || 0,
       description: "Total documents processed this month.",
     },
     {
       title: "Pipeline Created",
-      value: pipelineCreated,
+      value: dashboardData?.pipelineCreated || 0,
       description: "Pipelines created by users.",
     },
     {
       title: "Doc type Created",
-      value: documentCreated,
+      value: dashboardData?.documentCreated || 0,
       description: "Document types created by users.",
     },
     {
       title: "Schema Created",
-      value: schemaCreated,
+      value: dashboardData?.schemaCreated || 0,
       description: "Schema created by users.",
     },
   ];

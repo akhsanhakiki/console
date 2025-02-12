@@ -2,46 +2,66 @@ import { http, HttpResponse, delay } from "msw";
 
 export const handlers = [
   http.get("/api/workspaces", async ({ request }) => {
-    // Convert the request URL string to a URL object
     const url = new URL(request.url);
     const orgId = url.searchParams.get("orgId");
 
-    // Simulate network delay
     await delay(500);
 
-    const workspaces = [
+    const entities = [
       {
-        id: 1,
-        name: "Workspace A",
         organizationID: "org_2ssLYh6rviLkJAcZyBtyfsZ8nWh",
-        lastUpdated: "2024-01-01",
+        workspaces: [
+          {
+            id: 1,
+            name: "Workspace A",
+            lastUpdated: "2024-01-01",
+            extractor: 10,
+            pipeline: 10,
+            doctype: 10,
+            schema: 10,
+          },
+        ],
       },
       {
-        id: 2,
-        name: "Workspace B",
         organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-        lastUpdated: "2024-01-01",
-      },
-      {
-        id: 3,
-        name: "Workspace C",
-        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-        lastUpdated: "2024-01-01",
-      },
-      {
-        id: 4,
-        name: "Workspace D",
-        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-        lastUpdated: "2024-01-01",
+        workspaces: [
+          {
+            id: 2,
+            name: "Workspace B",
+            lastUpdated: "2024-01-01",
+            extractor: 20,
+            pipeline: 20,
+            doctype: 20,
+            schema: 20,
+          },
+          {
+            id: 3,
+            name: "Workspace C",
+            lastUpdated: "2024-01-01",
+            extractor: 30,
+            pipeline: 30,
+            doctype: 30,
+            schema: 30,
+          },
+          {
+            id: 4,
+            name: "Workspace D",
+            lastUpdated: "2024-01-01",
+            extractor: 40,
+            pipeline: 40,
+            doctype: 40,
+            schema: 40,
+          },
+        ],
       },
     ];
 
-    // Filter workspaces by orgId if provided
-    const filteredWorkspaces = orgId
-      ? workspaces.filter((w) => w.organizationID === orgId)
-      : workspaces;
+    // Find organization and return its workspaces
+    const orgWorkspaces = orgId
+      ? entities.find((e) => e.organizationID === orgId)?.workspaces || []
+      : entities.flatMap((e) => e.workspaces);
 
-    return HttpResponse.json(filteredWorkspaces, {
+    return HttpResponse.json(orgWorkspaces, {
       headers: {
         "Content-Type": "application/json",
       },

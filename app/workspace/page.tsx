@@ -31,16 +31,14 @@ const Workspace = () => {
     if (organization?.id) {
       fetchWorkspaces(organization.id);
     }
-
-    // Cleanup function to reset workspace selection
-    return () => {
-      setWorkspace("");
-    };
   }, [organization?.id]);
 
   const handleWorkspaceSelect = (workspaceId: string) => {
     setWorkspace(workspaceId);
-    router.push("/dashboard");
+    // Small delay to ensure the state is updated before navigation
+    setTimeout(() => {
+      router.push("/dashboard");
+    }, 100);
   };
 
   if (isLoading) {

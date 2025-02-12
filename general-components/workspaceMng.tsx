@@ -56,6 +56,13 @@ const WorkspaceMng = () => {
     }
   }, [organization?.id]);
 
+  // Separate effect for setting initial workspace
+  useEffect(() => {
+    if (!selectedWorkspace && workspaces.length > 0) {
+      setWorkspace(workspaces[0].id.toString());
+    }
+  }, [workspaces.length, selectedWorkspace]);
+
   // Find active workspace based on selectedWorkspace
   const activeWorkspace =
     workspaces.find((w) => w.id.toString() === selectedWorkspace) ||
