@@ -56,10 +56,18 @@ export const handlers = [
       },
     ];
 
+    // If no orgId is provided (personal account), return empty array
+    if (!orgId) {
+      return HttpResponse.json([], {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    }
+
     // Find organization and return its workspaces
-    const orgWorkspaces = orgId
-      ? entities.find((e) => e.organizationID === orgId)?.workspaces || []
-      : entities.flatMap((e) => e.workspaces);
+    const orgWorkspaces =
+      entities.find((e) => e.organizationID === orgId)?.workspaces || [];
 
     return HttpResponse.json(orgWorkspaces, {
       headers: {
@@ -106,6 +114,7 @@ export const handlers = [
         documentProcessed: 400,
         pipelineCreated: 420,
         documentCreated: 430,
+        schemaCreated: 440,
       },
     ];
 

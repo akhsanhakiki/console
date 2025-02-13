@@ -15,9 +15,10 @@ interface WorkspaceStore {
   selectedWorkspace: string;
   isLoading: boolean;
   error: string | null;
-  setWorkspace: (id: string) => void;
+  setWorkspace: (id: string) => Promise<void>;
   fetchWorkspaces: (orgId: string) => Promise<void>;
-  initializeWorkspace: (orgId: string) => void;
+  initializeWorkspace: (orgId: string) => Promise<void>;
+  clearWorkspaceState: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
@@ -25,11 +26,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   selectedWorkspace: "",
   isLoading: false,
   error: null,
-  setWorkspace: (id) => set({ selectedWorkspace: id }),
+  setWorkspace: async (id) => {
+    set({ isLoading: true });
+    try {
+      set({ selectedWorkspace: id, isLoading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
   fetchWorkspaces: async (orgId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`/api/workspaces?orgId=${orgId}`);
+      const url = orgId ? `/api/workspaces?orgId=${orgId}` : "/api/workspaces";
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch workspaces");
       const data = await response.json();
       set({ workspaces: data, isLoading: false });
@@ -37,7 +46,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       set({ error: (error as Error).message, isLoading: false });
     }
   },
-  initializeWorkspace: (orgId) => {
-    set({ selectedWorkspace: "", workspaces: [] });
+  initializeWorkspace: async (orgId) => {
+    set({ selectedWorkspace: "", workspaces: [], isLoading: true });
+    try {
+      const url = orgId ? `/api/workspaces?orgId=${orgId}` : "/api/workspaces";
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch workspaces");
+      const data = await response.json();
+      set({ workspaces: data, isLoading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+    }
+  },
+  clearWorkspaceState: () => {
+    set({ workspaces: [], selectedWorkspace: "", error: null });
   },
 }));

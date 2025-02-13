@@ -25,13 +25,18 @@ const Dashboard = () => {
   } = useDashboardStore();
 
   useEffect(() => {
-    const shouldFetchData = organization?.id && selectedWorkspace;
+    const fetchData = async () => {
+      if (organization?.id && selectedWorkspace) {
+        console.log(
+          "Fetching dashboard data for workspace:",
+          selectedWorkspace
+        );
+        await fetchDashboardData(organization.id, selectedWorkspace);
+      }
+    };
 
-    if (shouldFetchData && !dashboardData) {
-      console.log("Fetching dashboard data...");
-      fetchDashboardData(organization.id, selectedWorkspace);
-    }
-  }, [organization?.id, selectedWorkspace, dashboardData]);
+    fetchData();
+  }, [organization?.id, selectedWorkspace]); // Remove dashboardData dependency
 
   // Add a check for workspaces
   if (workspaces.length === 0) {

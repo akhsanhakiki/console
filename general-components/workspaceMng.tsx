@@ -8,7 +8,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { HiOutlineSlash } from "react-icons/hi2";
 import { HiChevronDown } from "react-icons/hi";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Divider } from "@heroui/react";
 
 interface Workspace {
@@ -20,6 +20,7 @@ interface Workspace {
 
 const WorkspaceMng = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -36,32 +37,52 @@ const WorkspaceMng = () => {
     fetchWorkspaces,
     setWorkspace,
     initializeWorkspace,
+    clearWorkspaceState,
   } = useWorkspaceStore();
 
-  // Effect to handle organization changes
-  useEffect(() => {
-    if (organization?.id) {
-      initializeWorkspace(organization.id);
-      // Reset workspace selection when organization changes
-      setWorkspace("");
-      // Redirect to workspace selection page when organization changes
-      router.push("/workspace");
-    }
-  }, [organization?.id]);
+  // Check if we're on the workspace selection page
+  const isWorkspacePage = pathname === "/workspace";
 
-  // Fetch workspaces when organization changes
+  // Effect to handle organization changes and personal account switches
   useEffect(() => {
-    if (organization?.id) {
-      fetchWorkspaces(organization.id);
-    }
-  }, [organization?.id]);
+    const handleOrgChange = async () => {
+      try {
+        // Reset workspace state
+        await clearWorkspaceState();
 
-  // Separate effect for setting initial workspace
+        // Force a client-side refresh to ensure clean state
+        router.refresh();
+
+        if (organization?.id) {
+          // Organization context
+          await initializeWorkspace(organization.id);
+        } else {
+          // Personal account context - initialize with empty state
+          await initializeWorkspace("");
+        }
+
+        // Always redirect to workspace selection to ensure proper state
+        router.replace("/workspace");
+      } catch (error) {
+        console.error("Error handling organization change:", error);
+      }
+    };
+
+    // Only run if Clerk is loaded
+    if (isLoaded) {
+      handleOrgChange();
+    }
+  }, [organization?.id, isLoaded]);
+
+  // Remove the separate fetch effect as it's now handled in handleOrgChange
   useEffect(() => {
-    if (!selectedWorkspace && workspaces.length > 0) {
+    if (!selectedWorkspace && workspaces.length > 0 && !isWorkspacePage) {
       setWorkspace(workspaces[0].id.toString());
+    } else if (!selectedWorkspace && !isWorkspacePage) {
+      // No workspaces available or switching context, redirect to workspace selection
+      router.replace("/workspace");
     }
-  }, [workspaces.length, selectedWorkspace]);
+  }, [workspaces.length, selectedWorkspace, isWorkspacePage]);
 
   // Find active workspace based on selectedWorkspace
   const activeWorkspace =
@@ -69,10 +90,29 @@ const WorkspaceMng = () => {
     workspaces[0];
 
   // Handle workspace selection and redirect to dashboard
-  const handleWorkspaceSelect = (workspace: Workspace) => {
-    setWorkspace(workspace.id.toString());
-    // Redirect to the dashboard immediately after selecting the workspace
-    router.push("/dashboard");
+  const handleWorkspaceSelect = async (workspace: Workspace) => {
+    try {
+      setIsOpen(false);
+
+      // Reset dashboard data before switching workspace
+      await clearWorkspaceState();
+
+      // Set new workspace
+      await setWorkspace(workspace.id.toString());
+
+      // Force a re-fetch of workspace data
+      if (organization?.id) {
+        await fetchWorkspaces(organization.id);
+      } else {
+        await fetchWorkspaces("");
+      }
+
+      // Navigate to dashboard
+      router.refresh(); // Force a client-side refresh
+      router.replace("/dashboard");
+    } catch (error) {
+      console.error("Error switching workspace:", error);
+    }
   };
 
   // Effect to handle clicks outside the panel to close it
@@ -165,24 +205,33 @@ const WorkspaceMng = () => {
             rootBox: "flex",
           },
         }}
+        afterCreateOrganizationUrl="/workspace"
+        afterLeaveOrganizationUrl="/workspace"
+        afterSelectOrganizationUrl="/workspace"
       />
-      <div className="flex flex-row items-center gap-1">
-        <HiOutlineSlash className="w-5 h-5 text-foreground-400" />
-      </div>
-      <div ref={panelRef} className="relative">
-        <div
-          className="flex flex-row items-center gap-1 px-2 py-1 rounded-md hover:bg-foreground-100 cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <p className="text-xs font-medium text-foreground-500 font-poppins">
-            {activeWorkspace?.name || "Select Workspace"}
-          </p>
-          <HiChevronDown
-            className={`w-4 h-4 text-foreground-500 transition-transform duration-200`}
-          />
-        </div>
-        {isOpen && <WorkspacePanel />}
-      </div>
+      {!isWorkspacePage && workspaces.length > 0 && (
+        <>
+          <div className="flex flex-row items-center gap-1">
+            <HiOutlineSlash className="w-5 h-5 text-foreground-400" />
+          </div>
+          <div ref={panelRef} className="relative">
+            <div
+              className="flex flex-row items-center gap-1 px-2 py-1 rounded-md hover:bg-foreground-100 cursor-pointer"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <p className="text-xs font-medium text-foreground-500 font-poppins">
+                {activeWorkspace?.name || "Select Workspace"}
+              </p>
+              <HiChevronDown
+                className={`w-4 h-4 text-foreground-500 transition-transform duration-200 ${
+                  isOpen ? "transform rotate-180" : ""
+                }`}
+              />
+            </div>
+            {isOpen && <WorkspacePanel />}
+          </div>
+        </>
+      )}
     </div>
   );
 };
