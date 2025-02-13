@@ -29,9 +29,8 @@ const columns = [
   { name: "SECRET KEY", uid: "secret", sortable: true },
   { name: "CREATED", uid: "created", sortable: true },
   { name: "LAST USED", uid: "lastUsed", sortable: true },
-  { name: "WORKSPACE", uid: "workspace", sortable: true },
   { name: "CREATED BY", uid: "createdBy", sortable: true },
-  { name: "PERMISSIONS", uid: "permissions", sortable: true },
+  { name: "EXPIRES", uid: "expires", sortable: true },
   { name: "", uid: "actions" },
 ];
 
@@ -42,9 +41,8 @@ const pipelines = [
     secret: "1234567890",
     created: "Jan 15, 2024",
     lastUsed: "Jan 15, 2024",
-    workspace: "General",
     createdBy: "John Doe",
-    permissions: "All",
+    expires: "Jan 15, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -53,9 +51,8 @@ const pipelines = [
     secret: "0987654321",
     created: "Jan 16, 2024",
     lastUsed: "Jan 16, 2024",
-    workspace: "Finance",
     createdBy: "Jane Smith",
-    permissions: "Read, Write",
+    expires: "Jan 16, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -64,9 +61,8 @@ const pipelines = [
     secret: "1122334455",
     created: "Jan 17, 2024",
     lastUsed: "Jan 17, 2024",
-    workspace: "Admin",
     createdBy: "Alice Johnson",
-    permissions: "All",
+    expires: "Jan 17, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -75,9 +71,8 @@ const pipelines = [
     secret: "2233445566",
     created: "Jan 18, 2024",
     lastUsed: "Jan 18, 2024",
-    workspace: "Development",
     createdBy: "Bob Brown",
-    permissions: "Read",
+    expires: "Jan 18, 2024",
     actions: "View",
   },
   {
@@ -86,9 +81,8 @@ const pipelines = [
     secret: "3344556677",
     created: "Jan 19, 2024",
     lastUsed: "Jan 19, 2024",
-    workspace: "Finance",
     createdBy: "Charlie Davis",
-    permissions: "All",
+    expires: "Jan 19, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -97,9 +91,8 @@ const pipelines = [
     secret: "4455667788",
     created: "Jan 20, 2024",
     lastUsed: "Jan 20, 2024",
-    workspace: "Storage",
     createdBy: "Diana Evans",
-    permissions: "Read, Write",
+    expires: "Jan 20, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -108,9 +101,8 @@ const pipelines = [
     secret: "5566778899",
     created: "Jan 21, 2024",
     lastUsed: "Jan 21, 2024",
-    workspace: "Analytics",
     createdBy: "Ethan Foster",
-    permissions: "Read",
+    expires: "Jan 21, 2024",
     actions: "View",
   },
   {
@@ -119,9 +111,8 @@ const pipelines = [
     secret: "6677889900",
     created: "Jan 22, 2024",
     lastUsed: "Jan 22, 2024",
-    workspace: "Marketing",
     createdBy: "Fiona Green",
-    permissions: "All",
+    expires: "Jan 22, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -130,9 +121,8 @@ const pipelines = [
     secret: "7788990011",
     created: "Jan 23, 2024",
     lastUsed: "Jan 23, 2024",
-    workspace: "Support",
     createdBy: "George Harris",
-    permissions: "Read, Write",
+    expires: "Jan 23, 2024",
     actions: "Edit, Delete",
   },
   {
@@ -141,9 +131,8 @@ const pipelines = [
     secret: "8899001122",
     created: "Jan 24, 2024",
     lastUsed: "Jan 24, 2024",
-    workspace: "Backup",
     createdBy: "Hannah Ives",
-    permissions: "All",
+    expires: "Jan 24, 2024",
     actions: "Edit, Delete",
   },
 ];
@@ -215,9 +204,12 @@ const ApiKeys = ({ setActiveTab, filterValue }: ActiveTabs) => {
     }
     if (columnKey === "name") {
       return <div>{item.name}</div>;
-    } else {
-      return cellValue;
     }
+    if (columnKey === "secret") {
+      const maskedSecret = item.secret.substring(0, 3) + "*".repeat(10);
+      return <div className="font-mono">{maskedSecret}</div>;
+    }
+    return cellValue;
   }, []);
 
   const bottomContent = useMemo(() => {
@@ -306,7 +298,10 @@ const ApiKeys = ({ setActiveTab, filterValue }: ActiveTabs) => {
             className="overflow-y-auto"
           >
             {(item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                className="cursor-pointer hover:bg-foreground-100"
+              >
                 {(columnKey) => (
                   <TableCell key={`${item.id}-${columnKey}`}>
                     {renderCell(item, columnKey)}

@@ -241,6 +241,12 @@ const ExtractionFileList = () => {
       }
       if (columnKey === "name") {
         return <div>{item.name}</div>;
+      } else if (
+        columnKey === "pipeline" ||
+        columnKey === "schema" ||
+        columnKey === "creationDate"
+      ) {
+        return <div className="text-foreground-500">{cellValue}</div>;
       } else {
         return cellValue;
       }
@@ -318,7 +324,6 @@ const ExtractionFileList = () => {
           removeWrapper
           aria-label="Extraction files table"
           selectedKeys={selectedKeys}
-          selectionMode="multiple"
           onSelectionChange={setSelectedKeys}
           onSortChange={setSortDescriptor}
           classNames={{
@@ -354,7 +359,10 @@ const ExtractionFileList = () => {
             className="overflow-y-auto"
           >
             {(item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                className="cursor-pointer hover:bg-foreground-100"
+              >
                 {(columnKey) => (
                   <TableCell>{renderCell(item, columnKey)}</TableCell>
                 )}

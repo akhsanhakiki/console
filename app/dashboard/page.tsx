@@ -172,7 +172,7 @@ const Dashboard = () => {
               </div>
 
               {/* Extraction Quota */}
-              <div className="flex flex-col bg-foreground-200 rounded-2xl gap-4 p-4 w-1/2">
+              <div className="flex flex-col bg-foreground-100 rounded-2xl gap-4 p-4 w-1/2">
                 <div className="flex flex-row justify-between">
                   <ExtractionQuotaIcon className="w-10 h-10 p-2 bg-background bg-opacity-70 rounded-2xl text-foreground-900" />
                   <Tooltip content="Extraction quota">
@@ -197,7 +197,7 @@ const Dashboard = () => {
 
             <div className="flex flex-row gap-4">
               {/* Total Processing Time */}
-              <div className="flex flex-col bg-foreground-200 rounded-2xl gap-4 p-4 w-1/2">
+              <div className="flex flex-col bg-foreground-100 rounded-2xl gap-4 p-4 w-1/2">
                 <div className="flex flex-row justify-between">
                   <TotalProcessingTimeIcon className="w-10 h-10 p-2 bg-background bg-opacity-70 rounded-2xl text-foreground-900" />
                   <Tooltip content="Total processing time">
@@ -217,7 +217,7 @@ const Dashboard = () => {
               </div>
 
               {/* Avg. time/page*/}
-              <div className="flex flex-col bg-foreground-200 rounded-2xl gap-4 p-4 w-1/2">
+              <div className="flex flex-col bg-foreground-100 rounded-2xl gap-4 p-4 w-1/2">
                 <div className="flex flex-row justify-between">
                   <AvgTimerperPageIcon className="w-10 h-10 p-2 bg-background bg-opacity-70 rounded-2xl text-foreground-900" />
                   <Tooltip content="Avg. time/page">

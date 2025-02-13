@@ -197,6 +197,13 @@ const Schemas = () => {
     }
     if (columnKey === "name") {
       return <div>{item.name}</div>;
+    } else if (
+      columnKey === "id" ||
+      columnKey === "docType" ||
+      columnKey === "description" ||
+      columnKey === "creationDate"
+    ) {
+      return <div className="text-foreground-500">{cellValue}</div>;
     } else {
       return cellValue;
     }
@@ -273,7 +280,6 @@ const Schemas = () => {
           removeWrapper
           aria-label="Extraction files table"
           selectedKeys={selectedKeys}
-          selectionMode="multiple"
           onSelectionChange={setSelectedKeys}
           onSortChange={setSortDescriptor}
           classNames={{
@@ -309,9 +315,14 @@ const Schemas = () => {
             className="overflow-y-auto"
           >
             {(item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                className="cursor-pointer hover:bg-foreground-100 transition-all duration-200 ease-in-out"
+              >
                 {(columnKey) => (
-                  <TableCell>{renderCell(item, columnKey)}</TableCell>
+                  <TableCell className="text-sm font-poppins">
+                    {renderCell(item, columnKey)}
+                  </TableCell>
                 )}
               </TableRow>
             )}

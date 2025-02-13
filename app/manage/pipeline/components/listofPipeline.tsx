@@ -179,6 +179,12 @@ const ListofPipeline = ({ setCurrentView }: ListofPipelineProps) => {
     }
     if (columnKey === "name") {
       return <div>{item.name}</div>;
+    } else if (
+      columnKey === "id" ||
+      columnKey === "description" ||
+      columnKey === "creationDate"
+    ) {
+      return <div className="text-foreground-500">{cellValue}</div>;
     } else {
       return cellValue;
     }
@@ -269,7 +275,6 @@ const ListofPipeline = ({ setCurrentView }: ListofPipelineProps) => {
           removeWrapper
           aria-label="Extraction files table"
           selectedKeys={selectedKeys}
-          selectionMode="multiple"
           onSelectionChange={setSelectedKeys}
           onSortChange={setSortDescriptor}
           classNames={{
@@ -305,9 +310,15 @@ const ListofPipeline = ({ setCurrentView }: ListofPipelineProps) => {
             className="overflow-y-auto"
           >
             {(item) => (
-              <TableRow key={item.id}>
+              <TableRow
+                key={item.id}
+                className="cursor-pointer hover:bg-foreground-100 transition-all duration-200 ease-in-out"
+              >
                 {(columnKey) => (
-                  <TableCell key={`${item.id}-${columnKey}`}>
+                  <TableCell
+                    key={`${item.id}-${columnKey}`}
+                    className="text-sm font-poppins"
+                  >
                     {renderCell(item, columnKey)}
                   </TableCell>
                 )}
