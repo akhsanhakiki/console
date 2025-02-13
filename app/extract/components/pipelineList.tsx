@@ -10,9 +10,10 @@ interface PipelineListProps {
     description: string;
     state: "active" | "disabled";
   }[];
+  setNewExtractor: (newExtractor: string) => void;
 }
 
-const PipelineList = ({ cards }: PipelineListProps) => {
+const PipelineList = ({ cards, setNewExtractor }: PipelineListProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(true);
@@ -79,6 +80,7 @@ const PipelineList = ({ cards }: PipelineListProps) => {
               <div
                 key={index}
                 className="flex-none w-[320px] snap-start first:ml-0"
+                onClick={() => setNewExtractor(card.title)}
               >
                 <PipelineCard
                   title={card.title}

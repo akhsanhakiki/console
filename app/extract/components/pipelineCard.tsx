@@ -18,7 +18,7 @@ const PipelineCard = ({
       className={`flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl p-3 w-80 h-28 overflow-hidden transition-all duration-200 
       ${
         state === "active"
-          ? "hover:bg-foreground-100"
+          ? "hover:bg-foreground-100 cursor-pointer"
           : "opacity-60 cursor-not-allowed"
       }`}
     >

@@ -53,6 +53,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
           };
         }
 
+        // Store the selected workspace in session storage
+        sessionStorage.setItem("selectedWorkspace", id);
+
         return {
           ...state,
           selectedWorkspace: id,

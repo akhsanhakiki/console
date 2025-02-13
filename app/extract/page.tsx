@@ -1,8 +1,9 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import PipelineList from "./components/pipelineList";
 import ExtractFileIcon from "@/public/images/icons/extractFileIcon";
 import ExtractionFileList from "./components/extractionFileList";
+import NewExtractor from "./components/newExtractor";
 
 const pipelineCards = [
   {
@@ -64,18 +65,33 @@ const pipelineCards = [
 ];
 
 const Extract = () => {
+  const [newExtractor, setNewExtractor] = useState("");
+
+  const handleBack = () => {
+    setNewExtractor("");
+  };
+
   return (
     <div className="w-full h-full flex flex-col gap-4">
       <h1 className="text-xl font-semibold font-poppins text-foreground-900">
         Extract
       </h1>
       <div className="flex flex-col gap-4 w-full h-full flex-grow">
-        <h2 className="text-base font-semibold font-poppins text-foreground-700">
-          New
-        </h2>
-        <PipelineList cards={pipelineCards} />
-        <div className="h-1 border-b border-foreground-200"></div>
-        <ExtractionFileList />
+        {newExtractor ? (
+          <NewExtractor onBack={handleBack} pipelineType={newExtractor} />
+        ) : (
+          <>
+            <h2 className="text-base font-semibold font-poppins text-foreground-700">
+              New
+            </h2>
+            <PipelineList
+              cards={pipelineCards}
+              setNewExtractor={setNewExtractor}
+            />
+            <div className="h-1 border-b border-foreground-200"></div>
+            <ExtractionFileList />
+          </>
+        )}
       </div>
     </div>
   );

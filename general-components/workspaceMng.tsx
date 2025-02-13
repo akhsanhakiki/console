@@ -62,7 +62,7 @@ const WorkspaceMng = () => {
         }
 
         // Always redirect to workspace selection to ensure proper state
-        router.replace("/workspace");
+        // router.replace("/workspace");
       } catch (error) {
         console.error("Error handling organization change:", error);
       }
@@ -80,7 +80,7 @@ const WorkspaceMng = () => {
       setWorkspace(workspaces[0].id.toString());
     } else if (!selectedWorkspace && !isWorkspacePage) {
       // No workspaces available or switching context, redirect to workspace selection
-      router.replace("/workspace");
+      //router.replace("/workspace");
     }
   }, [workspaces.length, selectedWorkspace, isWorkspacePage]);
 
