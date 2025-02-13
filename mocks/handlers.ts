@@ -1,5 +1,98 @@
 import { http, HttpResponse, delay } from "msw";
 
+interface Workspace {
+  id: number;
+  name: string;
+  lastUpdated: string;
+  extractor?: number;
+  pipeline?: number;
+  doctype?: number;
+  schema?: number;
+}
+
+interface WorkspaceEntity {
+  organizationID: string;
+  workspaces: Workspace[];
+}
+
+// Initialize from sessionStorage or use default data
+const loadPersistedData = () => {
+  if (typeof window !== "undefined") {
+    const persistedData = sessionStorage.getItem("workspaceData");
+    if (persistedData) {
+      const parsed = JSON.parse(persistedData);
+      return new Map<string, WorkspaceEntity>(parsed);
+    }
+  }
+  return new Map<string, WorkspaceEntity>();
+};
+
+const saveToStorage = (data: Map<string, WorkspaceEntity>) => {
+  if (typeof window !== "undefined") {
+    const serialized = JSON.stringify(Array.from(data.entries()));
+    sessionStorage.setItem("workspaceData", serialized);
+  }
+};
+
+const globalEntities = loadPersistedData();
+
+// Initialize with default data if empty
+if (globalEntities.size === 0) {
+  const defaultEntities: WorkspaceEntity[] = [
+    {
+      organizationID: "org_2ssLYh6rviLkJAcZyBtyfsZ8nWh",
+      workspaces: [
+        {
+          id: 1,
+          name: "Workspace A",
+          lastUpdated: "2024-01-01",
+          extractor: 10,
+          pipeline: 10,
+          doctype: 10,
+          schema: 10,
+        },
+      ],
+    },
+    {
+      organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
+      workspaces: [
+        {
+          id: 2,
+          name: "Workspace B",
+          lastUpdated: "2024-01-01",
+          extractor: 20,
+          pipeline: 20,
+          doctype: 20,
+          schema: 20,
+        },
+        {
+          id: 3,
+          name: "Workspace C",
+          lastUpdated: "2024-01-01",
+          extractor: 30,
+          pipeline: 30,
+          doctype: 30,
+          schema: 30,
+        },
+        {
+          id: 4,
+          name: "Workspace D",
+          lastUpdated: "2024-01-01",
+          extractor: 40,
+          pipeline: 40,
+          doctype: 40,
+          schema: 40,
+        },
+      ],
+    },
+  ];
+
+  defaultEntities.forEach((entity) => {
+    globalEntities.set(entity.organizationID, entity);
+  });
+  saveToStorage(globalEntities);
+}
+
 export const handlers = [
   http.get("/api/workspaces", async ({ request }) => {
     const url = new URL(request.url);
@@ -7,69 +100,56 @@ export const handlers = [
 
     await delay(500);
 
-    const entities = [
-      {
-        organizationID: "org_2ssLYh6rviLkJAcZyBtyfsZ8nWh",
-        workspaces: [
-          {
-            id: 1,
-            name: "Workspace A",
-            lastUpdated: "2024-01-01",
-            extractor: 10,
-            pipeline: 10,
-            doctype: 10,
-            schema: 10,
-          },
-        ],
-      },
-      {
-        organizationID: "org_2ssYf9vp9euHszDoTh0j6cbDB59",
-        workspaces: [
-          {
-            id: 2,
-            name: "Workspace B",
-            lastUpdated: "2024-01-01",
-            extractor: 20,
-            pipeline: 20,
-            doctype: 20,
-            schema: 20,
-          },
-          {
-            id: 3,
-            name: "Workspace C",
-            lastUpdated: "2024-01-01",
-            extractor: 30,
-            pipeline: 30,
-            doctype: 30,
-            schema: 30,
-          },
-          {
-            id: 4,
-            name: "Workspace D",
-            lastUpdated: "2024-01-01",
-            extractor: 40,
-            pipeline: 40,
-            doctype: 40,
-            schema: 40,
-          },
-        ],
-      },
-    ];
+    // For personal account, use the special key
+    const storageKey = orgId || "personal_account";
 
-    // If no orgId is provided (personal account), return empty array
-    if (!orgId) {
-      return HttpResponse.json([], {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+    // Get organization workspaces from global entities
+    const orgEntity = globalEntities.get(storageKey);
+    const workspaces = orgEntity?.workspaces || [];
+
+    return HttpResponse.json(workspaces, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }),
+
+  http.post("/api/workspaces", async ({ request }) => {
+    const body = await request.json();
+    const { organizationId, workspace } = body as {
+      organizationId: string;
+      workspace: Workspace;
+    };
+
+    // For personal account, use a special key
+    const storageKey = organizationId || "personal_account";
+
+    // Get existing organization data or create new
+    let orgEntity = globalEntities.get(storageKey);
+    if (!orgEntity) {
+      orgEntity = {
+        organizationID: storageKey,
+        workspaces: [],
+      };
     }
 
-    // Find organization and return its workspaces
-    const orgWorkspaces =
-      entities.find((e) => e.organizationID === orgId)?.workspaces || [];
+    // Create new workspace with generated ID
+    const newWorkspace = {
+      ...workspace,
+      id: Date.now(), // Use timestamp to ensure unique IDs
+      lastUpdated: new Date().toISOString().split("T")[0],
+    };
 
-    return HttpResponse.json(orgWorkspaces, {
+    // Add new workspace
+    orgEntity.workspaces.push(newWorkspace);
+
+    // Update global entities
+    globalEntities.set(storageKey, orgEntity);
+
+    // Persist to storage
+    saveToStorage(globalEntities);
+
+    return HttpResponse.json(newWorkspace, {
       headers: {
         "Content-Type": "application/json",
       },

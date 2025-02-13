@@ -222,11 +222,7 @@ const WorkspaceMng = () => {
               <p className="text-xs font-medium text-foreground-500 font-poppins">
                 {activeWorkspace?.name || "Select Workspace"}
               </p>
-              <HiChevronDown
-                className={`w-4 h-4 text-foreground-500 transition-transform duration-200 ${
-                  isOpen ? "transform rotate-180" : ""
-                }`}
-              />
+              <HiChevronDown className="w-4 h-4 text-foreground-500 transition-transform duration-200" />
             </div>
             {isOpen && <WorkspacePanel />}
           </div>
