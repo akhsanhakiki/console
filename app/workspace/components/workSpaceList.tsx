@@ -274,14 +274,6 @@ const WorkshopList = () => {
             ? `${organization.name} Workspaces`
             : "Personal Workspaces"}
         </h1>
-        <Button
-          className="text-foreground-800 border-foreground-300"
-          variant="bordered"
-          onPress={onOpen}
-        >
-          <FiPlus className="text-foreground-800" />
-          New Workspace
-        </Button>
       </div>
 
       {/* Workspace grid */}
@@ -298,7 +290,7 @@ const WorkshopList = () => {
               )}
               onClick={() => handleWorkspaceSelect(item.id.toString())}
             >
-              <div className="p-4 flex flex-col justify-between">
+              <div className="p-4 flex flex-col justify-between h-full">
                 {/* Workspace Name and Last Updated */}
                 <div className="flex flex-row justify-between items-center">
                   <div className="flex flex-col gap-1 flex-grow">
@@ -379,6 +371,18 @@ const WorkshopList = () => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Bottom section with New Workspace button */}
+      <div className="flex justify-end mt-auto">
+        <Button
+          className="text-foreground-800 border-foreground-300"
+          variant="bordered"
+          onPress={onOpen}
+        >
+          <FiPlus className="text-foreground-800" />
+          New Workspace
+        </Button>
       </div>
 
       {/* Workspace Creation/Edit Modal */}
