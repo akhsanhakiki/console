@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import PipelineList from "./components/playgorundList";
+import PipelineList from "./components/pipelineList";
 import ExtractFileIcon from "@/public/images/icons/extractFileIcon";
 import PlaygroundFileList from "./components/playgroundFileList";
 import NewPlayground from "./components/playground";

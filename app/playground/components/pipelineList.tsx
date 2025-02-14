@@ -6,7 +6,7 @@ import PlaygroundModal from "./playgorundModal";
 import { useDisclosure } from "@heroui/react";
 import { usePlaygrounds } from "../hooks/usePlayground";
 
-interface PlaygroundListProps {
+interface PipelineListProps {
   cards: {
     title: string;
     icon: React.ComponentType<{ className: string }>;
@@ -16,13 +16,13 @@ interface PlaygroundListProps {
   setNewPlayground: (name: string) => void;
 }
 
-interface PlaygroundData {
+interface PipelineData {
   name: string;
   type: string;
   createdAt: string;
 }
 
-const PlaygroundList = ({ cards, setNewPlayground }: PlaygroundListProps) => {
+const PipelineList = ({ cards, setNewPlayground }: PipelineListProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(true);
@@ -57,7 +57,13 @@ const PlaygroundList = ({ cards, setNewPlayground }: PlaygroundListProps) => {
     );
   };
 
-  const handlePipelineClick = (title: string, description: string) => {
+  const handlePipelineClick = (
+    title: string,
+    description: string,
+    state: "active" | "disabled"
+  ) => {
+    if (state === "disabled") return;
+
     setSelectedPipeline(title);
     setSelectedDescription(description);
     sessionStorage.setItem("selectedPipeline", title);
@@ -115,7 +121,11 @@ const PlaygroundList = ({ cards, setNewPlayground }: PlaygroundListProps) => {
                   key={index}
                   className="flex-none w-[320px] snap-start first:ml-0"
                   onClick={() =>
-                    handlePipelineClick(card.title, card.description)
+                    handlePipelineClick(
+                      card.title,
+                      card.description,
+                      card.state
+                    )
                   }
                 >
                   <PipelineCard
@@ -152,4 +162,4 @@ const PlaygroundList = ({ cards, setNewPlayground }: PlaygroundListProps) => {
   );
 };
 
-export default PlaygroundList;
+export default PipelineList;
