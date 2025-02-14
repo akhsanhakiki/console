@@ -8,14 +8,6 @@ import DocumentLoader from "./modules/documentLoader";
 
 export default function PipelinePage() {
   const [currentView, setCurrentView] = useState<"list" | "new">("list");
-  const [currentModule, setCurrentModule] = useState<
-    | "generalInfo"
-    | "documentLoader"
-    | "preProcess"
-    | "documentSchema"
-    | "contractSchema"
-    | "postProcess"
-  >("generalInfo");
   return (
     <div className="w-full h-full flex flex-col gap-4">
       <div className="flex flex-row gap-1 items-center">

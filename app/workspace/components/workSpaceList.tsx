@@ -8,6 +8,11 @@ import {
   DropdownMenu,
   DropdownTrigger,
   useDisclosure,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
 } from "@heroui/react";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -67,6 +72,10 @@ const WorkshopList = () => {
     name: "",
   });
   const [forceUpdate, setForceUpdate] = useState(0);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(
+    null
+  );
 
   useEffect(() => {
     // Wait until both org and user data are loaded
@@ -196,10 +205,6 @@ const WorkshopList = () => {
   };
 
   const handleDeleteWorkspace = async (workspace: Workspace) => {
-    if (!confirm("Are you sure you want to delete this workspace?")) {
-      return;
-    }
-
     try {
       const storageKey = organization?.id || "personal_account";
       const workspaceData = sessionStorage.getItem("workspaceData");
@@ -237,6 +242,9 @@ const WorkshopList = () => {
           }
         }
       }
+      // Close the modal after successful deletion
+      setDeleteModalOpen(false);
+      setWorkspaceToDelete(null);
     } catch (error) {
       console.error("Error deleting workspace:", error);
     }
@@ -248,7 +256,8 @@ const WorkshopList = () => {
       setIsEditMode(true);
       onOpen();
     } else if (key === "delete") {
-      handleDeleteWorkspace(workspace);
+      setWorkspaceToDelete(workspace);
+      setDeleteModalOpen(true);
     }
   };
 
@@ -397,6 +406,47 @@ const WorkshopList = () => {
         initialData={selectedItem}
         mode={isEditMode ? "edit" : "create"}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setWorkspaceToDelete(null);
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="font-poppins">Confirm Delete</ModalHeader>
+          <ModalBody>
+            <p className="text-foreground-700 font-poppins text-sm">
+              Are you sure you want to delete the workspace "
+              <span className="font-medium">{workspaceToDelete?.name}</span>"?
+              This action cannot be undone.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="bordered"
+              onPress={() => {
+                setDeleteModalOpen(false);
+                setWorkspaceToDelete(null);
+              }}
+              className="font-poppins"
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              onPress={() =>
+                workspaceToDelete && handleDeleteWorkspace(workspaceToDelete)
+              }
+              className="font-poppins"
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

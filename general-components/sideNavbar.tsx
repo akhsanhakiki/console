@@ -68,8 +68,8 @@ const navItems: NavItem[] = [
     activeIcon: dashboardIcon,
   },
   {
-    name: "Extract",
-    href: "/extract",
+    name: "Playground",
+    href: "/playground",
     icon: scanIconOut,
     activeIcon: scanIcon,
   },

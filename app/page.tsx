@@ -20,7 +20,7 @@ const moduleComponents = {
     loading: LoadingComponent,
     ssr: false,
   }),
-  "/extract": dynamic(() => import("./extract/page"), {
+  "/extract": dynamic(() => import("./playground/page"), {
     loading: LoadingComponent,
     ssr: false,
   }),

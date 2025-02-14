@@ -94,10 +94,7 @@ const WorkspaceMng = () => {
     try {
       setIsOpen(false);
 
-      // Reset dashboard data before switching workspace
-      await clearWorkspaceState();
-
-      // Set new workspace
+      // Set new workspace first
       await setWorkspace(workspace.id.toString());
 
       // Force a re-fetch of workspace data
@@ -108,8 +105,7 @@ const WorkspaceMng = () => {
       }
 
       // Navigate to dashboard
-      router.refresh(); // Force a client-side refresh
-      router.replace("/dashboard");
+      router.push("/dashboard");
     } catch (error) {
       console.error("Error switching workspace:", error);
     }

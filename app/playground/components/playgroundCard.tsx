@@ -1,18 +1,18 @@
 import React from "react";
 
-interface PipelineCardProps {
+interface PlaygroundCardProps {
   title: string;
   icon?: React.ComponentType<{ className: string }>;
   description: string;
   state: "active" | "disabled";
 }
 
-const PipelineCard = ({
+const PlaygroundCard = ({
   title,
   icon: Icon,
   description,
   state,
-}: PipelineCardProps) => {
+}: PlaygroundCardProps) => {
   return (
     <div
       className={`flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl p-3 w-80 h-28 overflow-hidden transition-all duration-200 
@@ -41,4 +41,4 @@ const PipelineCard = ({
   );
 };
 
-export default PipelineCard;
+export default PlaygroundCard;
