@@ -429,7 +429,7 @@ const PlaygroundFileList = ({
             {(item) => (
               <TableRow
                 key={item.id}
-                className="cursor-pointer hover:bg-foreground-100"
+                className="cursor-pointer font-poppins hover:bg-foreground-100"
                 onClick={() => {
                   setPlaygroundName(item.name);
                   setCurrentView("playground");
