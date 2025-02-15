@@ -1,107 +1,95 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
 import type { UploadedDocument } from "./docUpload";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+import { FiChevronDown } from "react-icons/fi";
+import DocPreview from "../components/docPreview";
 
-// Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+const DocSchema = () => {
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [selectedDocument, setSelectedDocument] =
+    useState<UploadedDocument | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-interface DocSchemaProps {
-  selectedDocument: UploadedDocument | null;
-}
+  useEffect(() => {
+    // Load documents from session storage
+    const loadDocuments = () => {
+      const storedDocs = sessionStorage.getItem("uploadedDocuments");
+      if (storedDocs) {
+        const parsedDocs = JSON.parse(storedDocs) as UploadedDocument[];
+        setDocuments(parsedDocs);
+        // Automatically select the first document if none is selected
+        if (!selectedDocument && parsedDocs.length > 0) {
+          setSelectedDocument(parsedDocs[0]);
+        }
+      }
+    };
 
-const DocSchema = ({ selectedDocument }: DocSchemaProps) => {
-  const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [scale, setScale] = useState(1.0);
+    loadDocuments();
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-    setCurrentPage(1);
-  };
+    // Add storage event listener to update when documents change
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "uploadedDocuments") {
+        loadDocuments();
+      }
+    };
 
-  if (!selectedDocument) {
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  if (documents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-foreground-500">
-        Select a document to view
+        No documents uploaded yet
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center p-4 border-b">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage <= 1}
-            className="px-3 py-1 rounded bg-background-100 hover:bg-background-200 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="text-sm">
-            Page {currentPage} of {numPages}
-          </span>
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(numPages, prev + 1))
-            }
-            disabled={currentPage >= numPages}
-            className="px-3 py-1 rounded bg-background-100 hover:bg-background-200 disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setScale((prev) => Math.max(0.5, prev - 0.1))}
-            className="px-3 py-1 rounded bg-background-100 hover:bg-background-200"
-          >
-            Zoom Out
-          </button>
-          <span className="text-sm">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale((prev) => Math.min(2, prev + 0.1))}
-            className="px-3 py-1 rounded bg-background-100 hover:bg-background-200"
-          >
-            Zoom In
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto p-4">
-        <Document
-          file={`data:application/pdf;base64,${selectedDocument.content}`}
-          onLoadSuccess={onDocumentLoadSuccess}
-          className="flex justify-center"
-          loading={
-            <div className="flex items-center justify-center h-full">
-              Loading PDF...
-            </div>
-          }
-          error={
-            <div className="flex items-center justify-center h-full text-red-500">
-              Failed to load PDF. Please try again.
-            </div>
-          }
-          options={{
-            cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
-            cMapPacked: true,
-          }}
+      {/* Document selector */}
+      <div className="p-4 border-b relative">
+        <div
+          className="flex items-center justify-between p-2 border rounded cursor-pointer hover:border-primary-500"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         >
-          <Page
-            pageNumber={currentPage}
-            scale={scale}
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
-            loading={
-              <div className="flex items-center justify-center h-[600px]">
-                Loading page...
-              </div>
-            }
+          <span className="text-sm font-medium">
+            {selectedDocument ? selectedDocument.name : "Select a document"}
+          </span>
+          <FiChevronDown
+            className={`w-4 h-4 transition-transform ${isDropdownOpen ? "transform rotate-180" : ""}`}
           />
-        </Document>
+        </div>
+
+        {/* Dropdown menu */}
+        {isDropdownOpen && (
+          <div className="absolute left-0 right-0 mt-1 mx-4 bg-white border rounded-md shadow-lg z-10">
+            {documents.map((doc) => (
+              <div
+                key={doc.id}
+                className={`p-2 cursor-pointer hover:bg-background-100 ${
+                  selectedDocument?.id === doc.id ? "bg-primary-50" : ""
+                }`}
+                onClick={() => {
+                  setSelectedDocument(doc);
+                  setIsDropdownOpen(false);
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">{doc.name}</span>
+                  <span className="text-xs text-foreground-400">
+                    ({(doc.size / 1024).toFixed(2)} KB)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* PDF Preview */}
+      <div className="flex-1">
+        <DocPreview selectedDocument={selectedDocument} />
       </div>
     </div>
   );

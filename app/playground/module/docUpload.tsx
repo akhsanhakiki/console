@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiUploadCloud, FiX } from "react-icons/fi";
 import { useDropzone } from "react-dropzone";
-import DocSchema from "./docSchema";
+import DocPreview from "../components/docPreview";
 
 export interface UploadedDocument {
   id: string;
@@ -155,7 +155,7 @@ const DocUpload = () => {
         </div>
       </div>
       <div className="w-[600px]">
-        <DocSchema selectedDocument={selectedFile} />
+        <DocPreview selectedDocument={selectedFile} />
       </div>
     </div>
   );
