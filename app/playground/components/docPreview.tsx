@@ -91,13 +91,15 @@ const DocPreview = ({ selectedDocument }: DocPreviewProps) => {
           options={{
             cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
             cMapPacked: true,
+            standardFontDataUrl:
+              "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
           }}
         >
           <Page
             pageNumber={currentPage}
             scale={scale}
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
             loading={
               <div className="flex items-center justify-center h-[600px]">
                 Loading page...
