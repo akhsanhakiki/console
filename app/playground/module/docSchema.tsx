@@ -33,6 +33,13 @@ type ResizeHandles = {
   [key: string]: ResizeHandle;
 };
 
+interface MousePosition {
+  x: number;
+  y: number;
+  pdfWidth: number;
+  pdfHeight: number;
+}
+
 // Create a memoized DocPreview component
 const MemoizedDocPreview = memo(DocPreview);
 
@@ -162,30 +169,64 @@ const DocSchema = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const getMousePosition = useCallback((e: React.MouseEvent) => {
-    if (!pdfContainerRef.current) return { x: 0, y: 0 };
-    const rect = pdfContainerRef.current.getBoundingClientRect();
-    const scrollContainer =
-      pdfContainerRef.current.querySelector(".overflow-auto");
-    const scrollLeft = scrollContainer ? scrollContainer.scrollLeft : 0;
-    const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
-    const x = e.clientX - rect.left + scrollLeft;
-    const y = e.clientY - rect.top + scrollTop;
-    return { x, y };
+  const getMousePosition = useCallback((e: React.MouseEvent): MousePosition => {
+    if (!pdfContainerRef.current)
+      return { x: 0, y: 0, pdfWidth: 0, pdfHeight: 0 };
+
+    // Get the PDF page element
+    const pdfPage = pdfContainerRef.current.querySelector(".react-pdf__Page");
+    const pdfCanvas = pdfContainerRef.current.querySelector(
+      ".react-pdf__Page__canvas"
+    );
+    if (!pdfPage || !pdfCanvas)
+      return { x: 0, y: 0, pdfWidth: 0, pdfHeight: 0 };
+
+    // Get the canvas bounds
+    const pageRect = pdfPage.getBoundingClientRect();
+    const canvasRect = pdfCanvas.getBoundingClientRect();
+
+    // Calculate position relative to the PDF page
+    const x = e.clientX - pageRect.left;
+    const y = e.clientY - pageRect.top;
+
+    // Get canvas dimensions
+    const pdfWidth = canvasRect.width;
+    const pdfHeight = canvasRect.height;
+
+    // Clamp coordinates to canvas bounds
+    const clampedX = Math.max(0, Math.min(x, pdfWidth));
+    const clampedY = Math.max(0, Math.min(y, pdfHeight));
+
+    return {
+      x: clampedX,
+      y: clampedY,
+      pdfWidth,
+      pdfHeight,
+    };
   }, []);
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      e.preventDefault(); // Prevent default browser behavior
-      const { x, y } = getMousePosition(e);
-      setCursorPosition({ x: Math.round(x), y: Math.round(y) });
+      e.preventDefault();
+      const { x, y, pdfWidth, pdfHeight } = getMousePosition(e);
+
+      // Only update cursor position if within PDF bounds
+      if (x >= 0 && x <= pdfWidth && y >= 0 && y <= pdfHeight) {
+        setCursorPosition({ x: Math.round(x), y: Math.round(y) });
+      }
 
       if (!startPointRef.current && !isDragging) return;
 
       if (isDragging && selectedRect) {
         if (!dragStartRef.current) return;
-        const newX = x - dragStartRef.current.x;
-        const newY = y - dragStartRef.current.y;
+        const newX = Math.max(
+          0,
+          Math.min(x - dragStartRef.current.x, pdfWidth - selectedRect.width)
+        );
+        const newY = Math.max(
+          0,
+          Math.min(y - dragStartRef.current.y, pdfHeight - selectedRect.height)
+        );
 
         const updatedRect = {
           ...selectedRect,
@@ -206,6 +247,16 @@ const DocSchema = () => {
         const dy = y - startPointRef.current.y;
 
         const newRect = { ...selectedRect };
+
+        // Helper function to clamp rectangle within PDF bounds
+        const clampRect = (rect: Rectangle) => {
+          rect.x = Math.max(0, Math.min(rect.x, pdfWidth - rect.width));
+          rect.y = Math.max(0, Math.min(rect.y, pdfHeight - rect.height));
+          rect.width = Math.max(5, Math.min(rect.width, pdfWidth - rect.x));
+          rect.height = Math.max(5, Math.min(rect.height, pdfHeight - rect.y));
+          return rect;
+        };
+
         switch (resizeHandle) {
           case "top":
             newRect.y += dy;
@@ -244,17 +295,25 @@ const DocSchema = () => {
         }
 
         if (newRect.width > 0 && newRect.height > 0) {
-          setSelectedRect(newRect);
+          const clampedRect = clampRect(newRect);
+          setSelectedRect(clampedRect);
           setRectangles((rects) =>
-            rects.map((r) => (r.id === newRect.id ? newRect : r))
+            rects.map((r) => (r.id === clampedRect.id ? clampedRect : r))
           );
         }
         startPointRef.current = { x, y };
       } else if (isDrawing && currentRect) {
+        const width = x - currentRect.x;
+        const height = y - currentRect.y;
+
+        // Clamp the rectangle dimensions within PDF bounds
+        const clampedWidth = Math.min(width, pdfWidth - currentRect.x);
+        const clampedHeight = Math.min(height, pdfHeight - currentRect.y);
+
         setCurrentRect({
           ...currentRect,
-          width: x - currentRect.x,
-          height: y - currentRect.y,
+          width: clampedWidth,
+          height: clampedHeight,
         });
       }
     },
@@ -263,7 +322,10 @@ const DocSchema = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      const { x, y } = getMousePosition(e);
+      const { x, y, pdfWidth, pdfHeight } = getMousePosition(e);
+
+      // Only allow drawing/dragging if within PDF bounds
+      if (x < 0 || x > pdfWidth || y < 0 || y > pdfHeight) return;
 
       if (cursorMode === "drag") {
         const clickedRect = rectangles.find(
@@ -491,12 +553,38 @@ const DocSchema = () => {
 
         {/* PDF Preview with Drawing Canvas */}
         <div
-          className="flex-1 relative select-none"
+          className="flex-1 relative select-none bg-foreground-100"
           ref={pdfContainerRef}
           style={{ cursor: cursorMode === "draw" ? "crosshair" : "default" }}
         >
+          <div className="h-full pointer-events-none">
+            <MemoizedDocPreview selectedDocument={selectedDocument} />
+          </div>
           <div
-            className="absolute inset-0 z-10"
+            className="absolute z-10"
+            style={{
+              position: "absolute",
+              top:
+                (
+                  pdfContainerRef.current?.querySelector(
+                    ".react-pdf__Page"
+                  ) as HTMLElement
+                )?.offsetTop || 0,
+              left:
+                (
+                  pdfContainerRef.current?.querySelector(
+                    ".react-pdf__Page"
+                  ) as HTMLElement
+                )?.offsetLeft || 0,
+              width:
+                pdfContainerRef.current?.querySelector(
+                  ".react-pdf__Page__canvas"
+                )?.clientWidth || "100%",
+              height:
+                pdfContainerRef.current?.querySelector(
+                  ".react-pdf__Page__canvas"
+                )?.clientHeight || "100%",
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -510,9 +598,6 @@ const DocSchema = () => {
               getResizeHandles={getResizeHandles}
               onRectClick={handleRectClick}
             />
-          </div>
-          <div className="h-full pointer-events-none">
-            <MemoizedDocPreview selectedDocument={selectedDocument} />
           </div>
         </div>
       </div>
