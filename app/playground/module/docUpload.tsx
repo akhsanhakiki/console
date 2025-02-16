@@ -94,7 +94,7 @@ const DocUpload = () => {
   });
 
   return (
-    <div className="flex h-full gap-4">
+    <div className="flex h-[calc(100vh-170px)] gap-4">
       <div className="flex-1">
         <div className="flex flex-col w-full h-full gap-4">
           <div

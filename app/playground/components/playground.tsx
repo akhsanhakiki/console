@@ -79,18 +79,6 @@ const NewPlayground = ({
             ?.component
         }
       </div>
-      <div className="flex flex-row gap-2 w-full justify-end mb-4">
-        <Button variant="bordered" onPress={onBack}>
-          Back
-        </Button>
-        <Button
-          variant="solid"
-          className="bg-gradient-to-r from-[#49FFDB] to-[#00E5FF]"
-          onPress={onNext}
-        >
-          Next
-        </Button>
-      </div>
     </div>
   );
 };

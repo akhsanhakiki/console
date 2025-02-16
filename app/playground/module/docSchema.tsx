@@ -10,6 +10,7 @@ import {
   FiMousePointer,
 } from "react-icons/fi";
 import DocPreview from "../components/docPreview";
+import { Select, SelectItem, Button } from "@heroui/react";
 
 interface Rectangle {
   id: string;
@@ -486,82 +487,19 @@ const DocSchema = () => {
   }
 
   return (
-    <div className="flex h-full">
-      <div className="flex flex-col flex-grow">
-        {/* Document selector */}
-        <div className="p-4 border-b relative">
-          <div className="flex items-center justify-between">
-            <div
-              className="flex-1 flex items-center justify-between p-2 border rounded cursor-pointer hover:border-primary-500"
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            >
-              <span className="text-sm font-medium">
-                {selectedDocument ? selectedDocument.name : "Select a document"}
-              </span>
-              <FiChevronDown
-                className={`w-4 h-4 transition-transform ${isDropdownOpen ? "transform rotate-180" : ""}`}
-              />
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <button
-                  className={`p-2 rounded ${cursorMode === "draw" ? "bg-primary-100" : "hover:bg-background-100"}`}
-                  onClick={() => setCursorMode("draw")}
-                  title="Draw Mode"
-                >
-                  <FiSquare className="w-4 h-4 text-foreground-500" />
-                </button>
-                <button
-                  className={`p-2 rounded ${cursorMode === "drag" ? "bg-primary-100" : "hover:bg-background-100"}`}
-                  onClick={() => setCursorMode("drag")}
-                  title="Move Mode"
-                >
-                  <FiMove className="w-4 h-4 text-foreground-500" />
-                </button>
-              </div>
-              <div className="text-xs text-foreground-500">
-                X: {cursorPosition.x}, Y: {cursorPosition.y}
-              </div>
-            </div>
-          </div>
-
-          {/* Dropdown menu */}
-          {isDropdownOpen && (
-            <div className="absolute left-0 right-0 mt-1 mx-4 bg-white border rounded-md shadow-lg z-10">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className={`p-2 cursor-pointer hover:bg-background-100 ${
-                    selectedDocument?.id === doc.id ? "bg-primary-50" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedDocument(doc);
-                    setIsDropdownOpen(false);
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">{doc.name}</span>
-                    <span className="text-xs text-foreground-400">
-                      ({(doc.size / 1024).toFixed(2)} KB)
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+    <div className="flex h-[calc(100vh-170px)]">
+      <div className="flex flex-col flex-grow overflow-hidden">
         {/* PDF Preview with Drawing Canvas */}
         <div
-          className="flex-1 relative select-none bg-foreground-100"
+          className="h-full relative select-none bg-foreground-100"
           ref={pdfContainerRef}
           style={{ cursor: cursorMode === "draw" ? "crosshair" : "default" }}
         >
-          <div className="h-full pointer-events-none">
+          <div className="h-full">
             <MemoizedDocPreview selectedDocument={selectedDocument} />
           </div>
           <div
-            className="absolute z-10"
+            className="absolute z-[1]"
             style={{
               position: "absolute",
               top:
@@ -584,6 +522,7 @@ const DocSchema = () => {
                 pdfContainerRef.current?.querySelector(
                   ".react-pdf__Page__canvas"
                 )?.clientHeight || "100%",
+              pointerEvents: "auto",
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -602,54 +541,132 @@ const DocSchema = () => {
         </div>
       </div>
 
-      {/* Right Panel - Rectangle Management */}
-      <div className="w-64 border-l p-4 overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium">Rectangles</h3>
-          <button
-            className="p-2 rounded hover:bg-background-100"
-            onClick={() => setRectangles([])}
+      {/* Right Panel - Document Selection and Rectangle Management */}
+      <div className="w-64 border-l flex flex-col h-full">
+        {/* Document Selection and Tools */}
+        <div className="p-4 border-b space-y-4">
+          <Select
+            label="Document"
+            labelPlacement="outside"
+            selectionMode="single"
+            selectedKeys={
+              selectedDocument ? new Set([selectedDocument.id]) : new Set()
+            }
+            onSelectionChange={(keys) => {
+              const selectedId = Array.from(keys)[0];
+              const selected = documents.find((doc) => doc.id === selectedId);
+              if (selected) setSelectedDocument(selected);
+            }}
+            size="sm"
+            placeholder="Select a document"
+            classNames={{
+              trigger: "w-full",
+              value: "w-full",
+            }}
           >
-            <FiTrash2 className="w-4 h-4 text-foreground-500" />
-          </button>
+            {documents.map((doc) => (
+              <SelectItem key={doc.id} textValue={doc.name}>
+                <div className="flex flex-col">
+                  <span className="text-sm">{doc.name}</span>
+                  <span className="text-xs text-foreground-400">
+                    {(doc.size / 1024).toFixed(2)} KB
+                  </span>
+                </div>
+              </SelectItem>
+            ))}
+          </Select>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={cursorMode === "draw" ? "solid" : "flat"}
+                onPress={() => setCursorMode("draw")}
+                startContent={<FiSquare className="w-4 h-4" />}
+                isIconOnly
+              ></Button>
+              <Button
+                size="sm"
+                variant={cursorMode === "drag" ? "solid" : "flat"}
+                onPress={() => setCursorMode("drag")}
+                startContent={<FiMove className="w-4 h-4" />}
+                isIconOnly
+              ></Button>
+            </div>
+            <div className="text-xs text-foreground-500">
+              {cursorPosition.x}, {cursorPosition.y}
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          {rectangles.map((rect) => (
-            <div
-              key={rect.id}
-              className={`p-2 rounded border ${
-                selectedRect?.id === rect.id
-                  ? "border-primary-500 bg-primary-50"
-                  : "border-foreground-200"
-              }`}
+
+        {/* Rectangle List */}
+        <div className="flex flex-col flex-1 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium">Rectangles</h3>
+            <Button
+              size="sm"
+              variant="flat"
+              isIconOnly
+              onPress={() => setRectangles([])}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium">
-                  Rectangle {rect.id.slice(-4)}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    className="p-1 rounded hover:bg-background-100"
-                    onClick={() => setSelectedRect(rect)}
-                  >
-                    <FiEdit2 className="w-3 h-3 text-foreground-500" />
-                  </button>
-                  <button
-                    className="p-1 rounded hover:bg-background-100"
-                    onClick={() => deleteRectangle(rect.id)}
-                  >
-                    <FiTrash2 className="w-3 h-3 text-foreground-500" />
-                  </button>
+              <FiTrash2 className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {rectangles.map((rect) => (
+              <div
+                key={rect.id}
+                className={`p-2 rounded border ${
+                  selectedRect?.id === rect.id
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-foreground-200"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium">
+                    Rectangle {rect.id.slice(-4)}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      isIconOnly
+                      onPress={() => setSelectedRect(rect)}
+                    >
+                      <FiEdit2 className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="flat"
+                      isIconOnly
+                      onPress={() => deleteRectangle(rect.id)}
+                    >
+                      <FiTrash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="text-xs text-foreground-500">
+                  <div>X: {Math.round(rect.x)}</div>
+                  <div>Y: {Math.round(rect.y)}</div>
+                  <div>Width: {Math.round(rect.width)}</div>
+                  <div>Height: {Math.round(rect.height)}</div>
                 </div>
               </div>
-              <div className="text-xs text-foreground-500">
-                <div>X: {Math.round(rect.x)}</div>
-                <div>Y: {Math.round(rect.y)}</div>
-                <div>Width: {Math.round(rect.width)}</div>
-                <div>Height: {Math.round(rect.height)}</div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          {/* Back and Next Button */}
+          <div className="flex flex-row gap-2 w-full justify-end mt-4 pt-4 border-t">
+            <Button variant="bordered" onPress={() => {}}>
+              Back
+            </Button>
+            <Button
+              variant="solid"
+              className="bg-gradient-to-r from-[#49FFDB] to-[#00E5FF]"
+              onPress={() => {}}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
     </div>
