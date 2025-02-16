@@ -7,7 +7,9 @@ import "react-pdf/dist/esm/Page/TextLayer.css";
 import { Button, ScrollShadow } from "@heroui/react";
 
 // Initialize PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+if (typeof window !== "undefined") {
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+}
 
 interface DocPreviewProps {
   selectedDocument: UploadedDocument | null;
@@ -54,8 +56,15 @@ const DocPreview = ({
       <ScrollShadow className="flex-1 overflow-y-auto" hideScrollBar>
         <div className="flex justify-center p-4">
           <Document
-            file={`data:application/pdf;base64,${selectedDocument.content}`}
+            file={
+              selectedDocument.content.startsWith("data:")
+                ? selectedDocument.content
+                : `data:application/pdf;base64,${selectedDocument.content}`
+            }
             onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={(error) => {
+              console.error("Error loading PDF:", error);
+            }}
             loading={
               <div className="flex items-center justify-center h-full">
                 Loading PDF...
@@ -72,6 +81,7 @@ const DocPreview = ({
               cMapPacked: true,
               standardFontDataUrl:
                 "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
+              verbosity: 0,
             }}
           >
             <Page
@@ -82,6 +92,11 @@ const DocPreview = ({
               loading={
                 <div className="flex items-center justify-center h-[600px]">
                   Loading page...
+                </div>
+              }
+              error={
+                <div className="flex items-center justify-center h-full text-red-500">
+                  Error loading page. Please try again.
                 </div>
               }
             />
