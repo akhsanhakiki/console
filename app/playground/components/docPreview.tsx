@@ -27,6 +27,7 @@ const DocPreview = ({
   const [numPages, setNumPages] = useState<number>(0);
   const [internalPage, setInternalPage] = useState(1);
   const [scale, setScale] = useState(1.0);
+  const [initialScaleSet, setInitialScaleSet] = useState(false);
   const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null);
   const [pdfJsDoc, setPdfJsDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(
     null
@@ -36,6 +37,7 @@ const DocPreview = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastScaleFactor = useRef<number>(1.0);
 
   // Use external page if provided, otherwise use internal state
   const currentPage = externalPage || internalPage;
@@ -126,26 +128,22 @@ const DocPreview = ({
       const page = await pdfJsDoc.getPage(currentPage);
       const originalViewport = page.getViewport({ scale: 1.0 });
 
-      // Calculate scale to fit the container
+      // Calculate container dimensions accounting for padding
       const containerWidth = containerRef.current.offsetWidth - 32;
       const containerHeight = containerRef.current.offsetHeight - 32;
 
-      // Calculate scale to fit the container while maintaining aspect ratio
-      let scaleFactor;
-      const containerAspectRatio = containerWidth / containerHeight;
-      const pageAspectRatio = originalViewport.width / originalViewport.height;
+      // Calculate scale to fit the container height
+      const heightScale = containerHeight / originalViewport.height;
 
-      if (containerAspectRatio > pageAspectRatio) {
-        scaleFactor = containerHeight / originalViewport.height;
-      } else {
-        scaleFactor = containerWidth / originalViewport.width;
+      // Set initial scale if not set yet (100% or fit to height, whichever is smaller)
+      if (!initialScaleSet) {
+        const initialScale = Math.min(1.0, heightScale);
+        setScale(initialScale);
+        setInitialScaleSet(true);
       }
 
-      // Apply user's scale factor
-      const finalScale = scaleFactor * scale;
-
-      // Create viewport with the calculated scale
-      const viewport = page.getViewport({ scale: finalScale });
+      // Create viewport with the current scale
+      const viewport = page.getViewport({ scale });
 
       // Create a new canvas for rendering
       const canvas = document.createElement("canvas");
@@ -196,6 +194,19 @@ const DocPreview = ({
     onPageChange?.(newPage);
   };
 
+  // Add zoom control functions
+  const handleZoom = (delta: number) => {
+    const ZOOM_STEP = 0.1;
+    const MIN_SCALE = 0.1;
+    const MAX_SCALE = 5.0;
+
+    const newScale = Math.max(
+      MIN_SCALE,
+      Math.min(MAX_SCALE, scale + scale * ZOOM_STEP * delta)
+    );
+    setScale(newScale);
+  };
+
   if (!selectedDocument) {
     return (
       <div className="flex items-center justify-center h-full text-foreground-500">
@@ -212,6 +223,7 @@ const DocPreview = ({
           ref={containerRef}
           style={{
             backgroundColor: "#f5f5f5",
+            height: "100%",
           }}
         >
           {pageImage ? (
@@ -328,7 +340,7 @@ const DocPreview = ({
             <Button
               size="sm"
               variant="flat"
-              onPress={() => setScale((prev) => Math.max(0.5, prev - 0.1))}
+              onPress={() => handleZoom(-1)}
               isIconOnly
             >
               -
@@ -339,7 +351,7 @@ const DocPreview = ({
             <Button
               size="sm"
               variant="flat"
-              onPress={() => setScale((prev) => Math.min(2, prev + 0.1))}
+              onPress={() => handleZoom(1)}
               isIconOnly
             >
               +

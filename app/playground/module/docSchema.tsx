@@ -54,12 +54,31 @@ const KonvaRectangle = memo(
       }
     }, [isSelected]);
 
+    const handleTransform = () => {
+      if (!shapeRef.current) return;
+
+      const node = shapeRef.current;
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+
+      node.scaleX(1);
+      node.scaleY(1);
+
+      onChange({
+        ...rect,
+        x: node.x(),
+        y: node.y(),
+        width: Math.max(5, node.width() * scaleX),
+        height: Math.max(5, node.height() * scaleY),
+      });
+    };
+
     return (
       <>
         <Rect
           ref={shapeRef}
           {...rect}
-          draggable={true}
+          draggable={isSelected}
           stroke={
             isSelected ? "#0066FF" : isHovered ? "#0066FFB0" : "#0066FF80"
           }
@@ -69,7 +88,7 @@ const KonvaRectangle = memo(
             setIsHovered(true);
             const stage = e.target.getStage();
             if (stage) {
-              stage.container().style.cursor = "move";
+              stage.container().style.cursor = "pointer";
             }
             onHoverStart();
           }}
@@ -92,54 +111,50 @@ const KonvaRectangle = memo(
               shadowOpacity: 0.3,
             });
           }}
-          onDragEnd={(e) => {
-            e.target.setAttrs({
-              shadowBlur: 0,
-              shadowOpacity: 0,
-            });
+          onDragMove={(e) => {
             onChange({
               ...rect,
               x: e.target.x(),
               y: e.target.y(),
             });
           }}
-          onTransformStart={(e) => {
-            if (cursorMode === "draw") {
-              e.target.setAttrs({
-                shadowColor: "#0066FF",
-                shadowBlur: 6,
-                shadowOpacity: 0.3,
-              });
-            }
-          }}
-          onTransformEnd={(e) => {
-            const node = shapeRef.current;
-            const scaleX = node.scaleX();
-            const scaleY = node.scaleY();
-
-            node.scaleX(1);
-            node.scaleY(1);
-            node.setAttrs({
+          onDragEnd={(e) => {
+            e.target.setAttrs({
               shadowBlur: 0,
               shadowOpacity: 0,
             });
-
-            onChange({
-              ...rect,
-              x: node.x(),
-              y: node.y(),
-              width: Math.max(5, node.width() * scaleX),
-              height: Math.max(5, node.height() * scaleY),
+          }}
+          onTransform={handleTransform}
+          onTransformStart={(e) => {
+            e.target.setAttrs({
+              shadowColor: "#0066FF",
+              shadowBlur: 6,
+              shadowOpacity: 0.3,
             });
           }}
+          onTransformEnd={(e) => {
+            e.target.setAttrs({
+              shadowBlur: 0,
+              shadowOpacity: 0,
+            });
+            handleTransform();
+          }}
         />
-        {isSelected && cursorMode === "draw" && (
+        {isSelected && (
           <Transformer
             ref={transformerRef}
             boundBoxFunc={(oldBox, newBox) => {
               const minWidth = 5;
               const minHeight = 5;
-              if (newBox.width < minWidth || newBox.height < minHeight) {
+              const maxWidth = 2000;
+              const maxHeight = 2000;
+
+              if (
+                newBox.width < minWidth ||
+                newBox.height < minHeight ||
+                newBox.width > maxWidth ||
+                newBox.height > maxHeight
+              ) {
                 return oldBox;
               }
               return newBox;
@@ -163,6 +178,8 @@ const KonvaRectangle = memo(
             anchorSize={8}
             keepRatio={false}
             padding={0}
+            ignoreStroke={true}
+            centeredScaling={false}
           />
         )}
       </>
@@ -273,15 +290,15 @@ const DocSchema = () => {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (cursorMode === "drag") return;
-
       const { x, y } = getRelativeCoordinates(e.clientX, e.clientY);
 
-      // Don't start drawing if clicking inside an existing rectangle
+      // Check if clicking inside any rectangle
       if (isPointInsideAnyRect(x, y)) {
         return;
       }
 
+      // If clicking outside rectangles, deselect current and start drawing
+      setSelectedRect(null);
       setIsDrawing(true);
       startPointRef.current = { x, y };
 
@@ -295,7 +312,7 @@ const DocSchema = () => {
         pageNumber: currentPage,
       });
     },
-    [cursorMode, currentPage, isPointInsideAnyRect, getRelativeCoordinates]
+    [currentPage, isPointInsideAnyRect, getRelativeCoordinates]
   );
 
   const handleMouseMove = useCallback(
@@ -334,8 +351,10 @@ const DocSchema = () => {
         currentRect.height > 5 &&
         !doesRectangleOverlap(currentRect)
       ) {
-        setRectangles([...rectangles, currentRect]);
-        setSelectedRect(currentRect);
+        const newRect = { ...currentRect };
+        setRectangles([...rectangles, newRect]);
+        // Auto-select the new rectangle
+        setSelectedRect(newRect);
       }
     }
 
@@ -343,6 +362,17 @@ const DocSchema = () => {
     setCurrentRect(null);
     startPointRef.current = null;
   }, [isDrawing, currentRect, rectangles, doesRectangleOverlap]);
+
+  // Add a handler for clicking on the stage background
+  const handleStageClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      // Only handle direct clicks on the stage (not on rectangles)
+      if (e.target === e.currentTarget) {
+        setSelectedRect(null);
+      }
+    },
+    []
+  );
 
   const handleRectChange = (newRect: Rectangle) => {
     setRectangles(
@@ -360,22 +390,10 @@ const DocSchema = () => {
 
   const handleRectHoverStart = useCallback(() => {
     isHoveringRect.current = true;
-    if (cursorMode === "draw") {
-      setPreviousMode("draw");
-      setCursorMode("drag");
-    }
-  }, [cursorMode]);
+  }, []);
 
   const handleRectHoverEnd = useCallback(() => {
     isHoveringRect.current = false;
-    if (cursorMode === "drag" && previousMode === "draw") {
-      setCursorMode("draw");
-    }
-  }, [cursorMode, previousMode]);
-
-  const handleModeChange = useCallback((newMode: CursorMode) => {
-    setCursorMode(newMode);
-    setPreviousMode(newMode);
   }, []);
 
   if (documents.length === 0) {
@@ -387,14 +405,15 @@ const DocSchema = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-170px)]">
-      <div className="flex flex-col flex-grow overflow-hidden">
+    <div className="flex flex-row h-[calc(100vh-170px)]">
+      <div className="flex flex-col w-10/12 overflow-hidden">
         <div
           ref={stageRef}
           className="h-full relative select-none bg-foreground-100"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onClick={handleStageClick}
           onMouseLeave={() => {
             if (isDrawing) {
               handleMouseUp();
@@ -433,7 +452,7 @@ const DocSchema = () => {
       </div>
 
       {/* Right Panel - Document Selection and Rectangle Management */}
-      <div className="w-64 border-l flex flex-col h-full">
+      <div className="w-2/12 border-l flex flex-col h-full">
         {/* Document Selection and Tools */}
         <div className="p-4 border-b space-y-4">
           <Select
@@ -469,28 +488,6 @@ const DocSchema = () => {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant={
-                  cursorMode === "draw" && !isHoveringRect.current
-                    ? "solid"
-                    : "flat"
-                }
-                onPress={() => handleModeChange("draw")}
-                startContent={<FiSquare className="w-4 h-4" />}
-                isIconOnly
-              ></Button>
-              <Button
-                size="sm"
-                variant={
-                  cursorMode === "drag" || isHoveringRect.current
-                    ? "solid"
-                    : "flat"
-                }
-                onPress={() => handleModeChange("drag")}
-                startContent={<FiMove className="w-4 h-4" />}
-                isIconOnly
-              ></Button>
               <div className="text-xs font-mono text-foreground-600 bg-foreground-100 px-2 py-1 rounded">
                 ({cursorPosition.x}, {cursorPosition.y})
               </div>
