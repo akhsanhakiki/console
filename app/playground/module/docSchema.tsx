@@ -32,15 +32,20 @@ const KonvaRectangle = memo(
     onSelect,
     onChange,
     cursorMode,
+    onHoverStart,
+    onHoverEnd,
   }: {
     rect: Rectangle;
     isSelected: boolean;
     onSelect: () => void;
     onChange: (newAttrs: Rectangle) => void;
     cursorMode: CursorMode;
+    onHoverStart: () => void;
+    onHoverEnd: () => void;
   }) => {
     const shapeRef = React.useRef<any>(null);
     const transformerRef = React.useRef<any>(null);
+    const [isHovered, setIsHovered] = React.useState(false);
 
     React.useEffect(() => {
       if (isSelected && transformerRef.current && shapeRef.current) {
@@ -54,17 +59,58 @@ const KonvaRectangle = memo(
         <Rect
           ref={shapeRef}
           {...rect}
-          draggable={cursorMode === "drag"}
-          stroke={isSelected ? "#0066FF" : "#0066FF80"}
-          strokeWidth={2}
-          fill="transparent"
-          onMouseDown={onSelect}
+          draggable={true}
+          stroke={
+            isSelected ? "#0066FF" : isHovered ? "#0066FFB0" : "#0066FF80"
+          }
+          strokeWidth={isSelected || isHovered ? 2.5 : 2}
+          fill={isHovered ? "rgba(0, 102, 255, 0.05)" : "transparent"}
+          onMouseEnter={(e) => {
+            setIsHovered(true);
+            const stage = e.target.getStage();
+            if (stage) {
+              stage.container().style.cursor = "move";
+            }
+            onHoverStart();
+          }}
+          onMouseLeave={(e) => {
+            setIsHovered(false);
+            const stage = e.target.getStage();
+            if (stage) {
+              stage.container().style.cursor = "default";
+            }
+            onHoverEnd();
+          }}
+          onMouseDown={(e) => {
+            e.cancelBubble = true;
+            onSelect();
+          }}
+          onDragStart={(e) => {
+            e.target.setAttrs({
+              shadowColor: "#0066FF",
+              shadowBlur: 6,
+              shadowOpacity: 0.3,
+            });
+          }}
           onDragEnd={(e) => {
+            e.target.setAttrs({
+              shadowBlur: 0,
+              shadowOpacity: 0,
+            });
             onChange({
               ...rect,
               x: e.target.x(),
               y: e.target.y(),
             });
+          }}
+          onTransformStart={(e) => {
+            if (cursorMode === "draw") {
+              e.target.setAttrs({
+                shadowColor: "#0066FF",
+                shadowBlur: 6,
+                shadowOpacity: 0.3,
+              });
+            }
           }}
           onTransformEnd={(e) => {
             const node = shapeRef.current;
@@ -73,6 +119,10 @@ const KonvaRectangle = memo(
 
             node.scaleX(1);
             node.scaleY(1);
+            node.setAttrs({
+              shadowBlur: 0,
+              shadowOpacity: 0,
+            });
 
             onChange({
               ...rect,
@@ -87,7 +137,6 @@ const KonvaRectangle = memo(
           <Transformer
             ref={transformerRef}
             boundBoxFunc={(oldBox, newBox) => {
-              // Limit resize
               const minWidth = 5;
               const minHeight = 5;
               if (newBox.width < minWidth || newBox.height < minHeight) {
@@ -95,6 +144,25 @@ const KonvaRectangle = memo(
               }
               return newBox;
             }}
+            enabledAnchors={[
+              "top-left",
+              "top-right",
+              "bottom-left",
+              "bottom-right",
+              "middle-left",
+              "middle-right",
+              "top-center",
+              "bottom-center",
+            ]}
+            rotateEnabled={false}
+            borderStroke="#0066FF"
+            borderStrokeWidth={1.5}
+            anchorFill="#FFFFFF"
+            anchorStroke="#0066FF"
+            anchorStrokeWidth={1.5}
+            anchorSize={8}
+            keepRatio={false}
+            padding={0}
           />
         )}
       </>
@@ -113,8 +181,12 @@ const DocSchema = () => {
   const [currentRect, setCurrentRect] = useState<Rectangle | null>(null);
   const [selectedRect, setSelectedRect] = useState<Rectangle | null>(null);
   const [cursorMode, setCursorMode] = useState<CursorMode>("draw");
+  const [previousMode, setPreviousMode] = useState<CursorMode>("draw");
   const [currentPage, setCurrentPage] = useState(1);
   const startPointRef = React.useRef<{ x: number; y: number } | null>(null);
+  const isHoveringRect = React.useRef(false);
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const stageRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load documents from session storage
@@ -143,79 +215,134 @@ const DocSchema = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  // Add a function to check if a point is inside any existing rectangle
+  const isPointInsideAnyRect = useCallback(
+    (x: number, y: number) => {
+      return rectangles.some(
+        (rect) =>
+          rect.pageNumber === currentPage &&
+          x >= rect.x &&
+          x <= rect.x + rect.width &&
+          y >= rect.y &&
+          y <= rect.y + rect.height
+      );
+    },
+    [rectangles, currentPage]
+  );
+
+  // Add a function to check if a rectangle overlaps with any existing rectangle
+  const doesRectangleOverlap = useCallback(
+    (newRect: Rectangle) => {
+      return rectangles.some(
+        (rect) =>
+          rect.pageNumber === currentPage &&
+          !(
+            newRect.x + newRect.width < rect.x ||
+            newRect.x > rect.x + rect.width ||
+            newRect.y + newRect.height < rect.y ||
+            newRect.y > rect.y + rect.height
+          )
+      );
+    },
+    [rectangles, currentPage]
+  );
+
+  // Add this function to get coordinates relative to PDF
+  const getRelativeCoordinates = useCallback(
+    (clientX: number, clientY: number) => {
+      if (!stageRef.current) return { x: 0, y: 0 };
+
+      // Get the stage container's bounds
+      const stageRect = stageRef.current.getBoundingClientRect();
+
+      // Find the PDF canvas element
+      const pdfCanvas = stageRef.current.querySelector("canvas");
+      if (!pdfCanvas) return { x: 0, y: 0 };
+
+      // Get the PDF canvas bounds
+      const pdfRect = pdfCanvas.getBoundingClientRect();
+
+      // Calculate coordinates relative to PDF canvas
+      return {
+        x: Math.round(clientX - pdfRect.left),
+        y: Math.round(clientY - pdfRect.top),
+      };
+    },
+    []
+  );
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (cursorMode === "drag") return;
 
-      const stage = e.currentTarget;
-      const rect = stage.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const { x, y } = getRelativeCoordinates(e.clientX, e.clientY);
+
+      // Don't start drawing if clicking inside an existing rectangle
+      if (isPointInsideAnyRect(x, y)) {
+        return;
+      }
 
       setIsDrawing(true);
       startPointRef.current = { x, y };
 
-      const newRect = {
+      // Create initial rectangle with 0 dimensions
+      setCurrentRect({
         id: Date.now().toString(),
         x,
         y,
         width: 0,
         height: 0,
         pageNumber: currentPage,
-      };
-
-      setCurrentRect(newRect);
+      });
     },
-    [cursorMode, currentPage]
+    [cursorMode, currentPage, isPointInsideAnyRect, getRelativeCoordinates]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isDrawing || !currentRect || !startPointRef.current) return;
+      const { x: mouseX, y: mouseY } = getRelativeCoordinates(
+        e.clientX,
+        e.clientY
+      );
+      setCursorPosition({ x: mouseX, y: mouseY });
 
-      const stage = e.target as HTMLElement;
-      const rect = stage.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      if (!isDrawing || !startPointRef.current) return;
 
-      const width = x - startPointRef.current.x;
-      const height = y - startPointRef.current.y;
+      if (!currentRect) return;
 
+      // Calculate width and height based on start point and current position
+      const width = mouseX - startPointRef.current.x;
+      const height = mouseY - startPointRef.current.y;
+
+      // Update rectangle dimensions
       setCurrentRect({
         ...currentRect,
-        width,
-        height,
+        width: Math.abs(width),
+        height: Math.abs(height),
+        x: width < 0 ? mouseX : startPointRef.current.x,
+        y: height < 0 ? mouseY : startPointRef.current.y,
       });
     },
-    [isDrawing, currentRect]
+    [isDrawing, currentRect, getRelativeCoordinates]
   );
 
   const handleMouseUp = useCallback(() => {
     if (isDrawing && currentRect) {
-      const normalizedRect = {
-        ...currentRect,
-        x:
-          currentRect.width < 0
-            ? currentRect.x + currentRect.width
-            : currentRect.x,
-        y:
-          currentRect.height < 0
-            ? currentRect.y + currentRect.height
-            : currentRect.y,
-        width: Math.abs(currentRect.width),
-        height: Math.abs(currentRect.height),
-      };
-
-      if (normalizedRect.width > 5 && normalizedRect.height > 5) {
-        setRectangles([...rectangles, normalizedRect]);
-        setSelectedRect(normalizedRect);
+      // Only add the rectangle if it has minimum dimensions
+      if (
+        currentRect.width > 5 &&
+        currentRect.height > 5 &&
+        !doesRectangleOverlap(currentRect)
+      ) {
+        setRectangles([...rectangles, currentRect]);
+        setSelectedRect(currentRect);
       }
     }
 
     setIsDrawing(false);
     setCurrentRect(null);
     startPointRef.current = null;
-  }, [isDrawing, currentRect, rectangles]);
+  }, [isDrawing, currentRect, rectangles, doesRectangleOverlap]);
 
   const handleRectChange = (newRect: Rectangle) => {
     setRectangles(
@@ -231,6 +358,26 @@ const DocSchema = () => {
     }
   };
 
+  const handleRectHoverStart = useCallback(() => {
+    isHoveringRect.current = true;
+    if (cursorMode === "draw") {
+      setPreviousMode("draw");
+      setCursorMode("drag");
+    }
+  }, [cursorMode]);
+
+  const handleRectHoverEnd = useCallback(() => {
+    isHoveringRect.current = false;
+    if (cursorMode === "drag" && previousMode === "draw") {
+      setCursorMode("draw");
+    }
+  }, [cursorMode, previousMode]);
+
+  const handleModeChange = useCallback((newMode: CursorMode) => {
+    setCursorMode(newMode);
+    setPreviousMode(newMode);
+  }, []);
+
   if (documents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-foreground-500">
@@ -243,10 +390,16 @@ const DocSchema = () => {
     <div className="flex h-[calc(100vh-170px)]">
       <div className="flex flex-col flex-grow overflow-hidden">
         <div
+          ref={stageRef}
           className="h-full relative select-none bg-foreground-100"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onMouseLeave={() => {
+            if (isDrawing) {
+              handleMouseUp();
+            }
+          }}
         >
           <DocPreview
             selectedDocument={selectedDocument}
@@ -263,6 +416,8 @@ const DocSchema = () => {
                   onSelect={() => setSelectedRect(rect)}
                   onChange={handleRectChange}
                   cursorMode={cursorMode}
+                  onHoverStart={handleRectHoverStart}
+                  onHoverEnd={handleRectHoverEnd}
                 />
               ))}
             {currentRect && (
@@ -316,18 +471,29 @@ const DocSchema = () => {
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                variant={cursorMode === "draw" ? "solid" : "flat"}
-                onPress={() => setCursorMode("draw")}
+                variant={
+                  cursorMode === "draw" && !isHoveringRect.current
+                    ? "solid"
+                    : "flat"
+                }
+                onPress={() => handleModeChange("draw")}
                 startContent={<FiSquare className="w-4 h-4" />}
                 isIconOnly
               ></Button>
               <Button
                 size="sm"
-                variant={cursorMode === "drag" ? "solid" : "flat"}
-                onPress={() => setCursorMode("drag")}
+                variant={
+                  cursorMode === "drag" || isHoveringRect.current
+                    ? "solid"
+                    : "flat"
+                }
+                onPress={() => handleModeChange("drag")}
                 startContent={<FiMove className="w-4 h-4" />}
                 isIconOnly
               ></Button>
+              <div className="text-xs font-mono text-foreground-600 bg-foreground-100 px-2 py-1 rounded">
+                ({cursorPosition.x}, {cursorPosition.y})
+              </div>
             </div>
           </div>
         </div>
@@ -349,14 +515,13 @@ const DocSchema = () => {
             {rectangles.map((rect) => (
               <div
                 key={rect.id}
-                className={`p-2 rounded border cursor-pointer ${
+                className={`p-2 rounded border cursor-pointer transition-all duration-150 ${
                   selectedRect?.id === rect.id
-                    ? "border-primary-500 bg-primary-50"
+                    ? "border-primary-500 bg-primary-50 shadow-sm"
                     : "border-foreground-200 hover:border-primary-300 hover:bg-primary-50/50"
                 }`}
                 onClick={() => {
                   setSelectedRect(rect);
-                  // If the rectangle is on a different page, switch to that page
                   if (rect.pageNumber !== currentPage) {
                     setCurrentPage(rect.pageNumber);
                   }
