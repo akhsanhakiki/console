@@ -1,45 +1,199 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import React, { useState, useEffect, useRef } from "react";
+import { PDFDocument } from "pdf-lib";
+import * as pdfjsLib from "pdfjs-dist";
+import { Stage, Layer, Image } from "react-konva";
 import type { UploadedDocument } from "../module/docUpload";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
 import { Button, ScrollShadow } from "@heroui/react";
 
 // Initialize PDF.js worker
 if (typeof window !== "undefined") {
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf/pdf.worker.js";
 }
 
 interface DocPreviewProps {
   selectedDocument: UploadedDocument | null;
   onPageChange?: (pageNumber: number) => void;
   currentPage?: number;
+  children?: React.ReactNode;
 }
 
 const DocPreview = ({
   selectedDocument,
   onPageChange,
   currentPage: externalPage,
+  children,
 }: DocPreviewProps) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [internalPage, setInternalPage] = useState(1);
   const [scale, setScale] = useState(1.0);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocument | null>(null);
+  const [pdfJsDoc, setPdfJsDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(
+    null
+  );
+  const [pageImage, setPageImage] = useState<HTMLImageElement | null>(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Use external page if provided, otherwise use internal state
   const currentPage = externalPage || internalPage;
 
   useEffect(() => {
     setInternalPage(1);
+    loadPDF();
   }, [selectedDocument]);
+
+  useEffect(() => {
+    if (pdfDoc && pdfJsDoc) {
+      renderPage();
+    }
+  }, [currentPage, scale, pdfDoc, pdfJsDoc]);
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        setStageSize({
+          width: containerRef.current.offsetWidth - 32,
+          height: containerRef.current.offsetHeight - 32,
+        });
+      }
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  const loadPDF = async () => {
+    if (!selectedDocument) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Create a copy of the PDF data to prevent ArrayBuffer detachment
+      const pdfBytes = new Uint8Array(
+        selectedDocument.content.startsWith("data:")
+          ? atob(selectedDocument.content.split(",")[1])
+              .split("")
+              .map((char) => char.charCodeAt(0))
+          : atob(selectedDocument.content)
+              .split("")
+              .map((char) => char.charCodeAt(0))
+      );
+
+      // Load with PDF.js first for rendering
+      const pdfJsDoc = await pdfjsLib.getDocument({
+        data: pdfBytes.slice(), // Create a copy for PDF.js
+        cMapUrl: "/cmaps/",
+        cMapPacked: true,
+      }).promise;
+      setPdfJsDoc(pdfJsDoc);
+      setNumPages(pdfJsDoc.numPages);
+
+      // Then load with pdf-lib for manipulation
+      try {
+        const pdf = await PDFDocument.load(pdfBytes.slice()); // Create another copy for pdf-lib
+        setPdfDoc(pdf);
+      } catch (pdfLibError) {
+        if (
+          pdfLibError instanceof Error &&
+          pdfLibError.message.includes("encrypted")
+        ) {
+          const pdf = await PDFDocument.load(pdfBytes.slice(), {
+            ignoreEncryption: true,
+          });
+          setPdfDoc(pdf);
+        } else {
+          throw pdfLibError;
+        }
+      }
+    } catch (error) {
+      console.error("Error loading PDF:", error);
+      setError(error instanceof Error ? error.message : "Failed to load PDF");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderPage = async () => {
+    if (!pdfJsDoc || !containerRef.current) return;
+
+    setLoading(true);
+    try {
+      const page = await pdfJsDoc.getPage(currentPage);
+      const originalViewport = page.getViewport({ scale: 1.0 });
+
+      // Calculate scale to fit the container
+      const containerWidth = containerRef.current.offsetWidth - 32;
+      const containerHeight = containerRef.current.offsetHeight - 32;
+
+      // Calculate scale to fit the container while maintaining aspect ratio
+      let scaleFactor;
+      const containerAspectRatio = containerWidth / containerHeight;
+      const pageAspectRatio = originalViewport.width / originalViewport.height;
+
+      if (containerAspectRatio > pageAspectRatio) {
+        scaleFactor = containerHeight / originalViewport.height;
+      } else {
+        scaleFactor = containerWidth / originalViewport.width;
+      }
+
+      // Apply user's scale factor
+      const finalScale = scaleFactor * scale;
+
+      // Create viewport with the calculated scale
+      const viewport = page.getViewport({ scale: finalScale });
+
+      // Create a new canvas for rendering
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) return;
+
+      // Clear the canvas with white background
+      context.fillStyle = "white";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Render PDF page to canvas
+      const renderContext = {
+        canvasContext: context,
+        viewport,
+        background: "white",
+      };
+
+      await page.render(renderContext).promise;
+
+      // Create a new image element
+      const img = new window.Image();
+      img.onload = () => {
+        setPageImage(img);
+        setStageSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+        setLoading(false);
+      };
+      img.src = canvas.toDataURL("image/png", 1.0);
+
+      // Clean up
+      canvas.remove();
+    } catch (error) {
+      console.error("Error rendering PDF page:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to render PDF page"
+      );
+      setLoading(false);
+    }
+  };
 
   const handlePageChange = (newPage: number) => {
     setInternalPage(newPage);
     onPageChange?.(newPage);
-  };
-
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
   };
 
   if (!selectedDocument) {
@@ -52,55 +206,95 @@ const DocPreview = ({
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Document Viewer with ScrollShadow */}
       <ScrollShadow className="flex-1 overflow-y-auto" hideScrollBar>
-        <div className="flex justify-center p-4">
-          <Document
-            file={
-              selectedDocument.content.startsWith("data:")
-                ? selectedDocument.content
-                : `data:application/pdf;base64,${selectedDocument.content}`
-            }
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={(error) => {
-              console.error("Error loading PDF:", error);
-            }}
-            loading={
-              <div className="flex items-center justify-center h-full">
-                Loading PDF...
-              </div>
-            }
-            error={
-              <div className="flex items-center justify-center h-full text-red-500">
-                Failed to load PDF. Please try again.
-              </div>
-            }
-            options={{
-              cMapUrl:
-                "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
-              cMapPacked: true,
-              standardFontDataUrl:
-                "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
-              verbosity: 0,
-            }}
-          >
-            <Page
-              pageNumber={currentPage}
-              scale={scale}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              loading={
-                <div className="flex items-center justify-center h-[600px]">
-                  Loading page...
-                </div>
-              }
-              error={
-                <div className="flex items-center justify-center h-full text-red-500">
-                  Error loading page. Please try again.
-                </div>
-              }
-            />
-          </Document>
+        <div
+          className="flex justify-center p-4 min-h-[600px]"
+          ref={containerRef}
+          style={{
+            backgroundColor: "#f5f5f5",
+          }}
+        >
+          {pageImage ? (
+            <Stage
+              width={stageSize.width}
+              height={stageSize.height}
+              style={{
+                backgroundColor: "white",
+                boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+              }}
+              onMouseDown={(e) => {
+                // Prevent default to avoid text selection
+                e.evt.preventDefault();
+                const stage = e.target.getStage();
+                const point = stage?.getPointerPosition();
+                if (point) {
+                  containerRef.current?.dispatchEvent(
+                    new MouseEvent("mousedown", {
+                      bubbles: true,
+                      clientX: e.evt.clientX,
+                      clientY: e.evt.clientY,
+                      buttons: e.evt.buttons,
+                    })
+                  );
+                }
+              }}
+              onMouseMove={(e) => {
+                e.evt.preventDefault();
+                const stage = e.target.getStage();
+                const point = stage?.getPointerPosition();
+                if (point) {
+                  containerRef.current?.dispatchEvent(
+                    new MouseEvent("mousemove", {
+                      bubbles: true,
+                      clientX: e.evt.clientX,
+                      clientY: e.evt.clientY,
+                      buttons: e.evt.buttons,
+                    })
+                  );
+                }
+              }}
+              onMouseUp={(e) => {
+                e.evt.preventDefault();
+                const stage = e.target.getStage();
+                const point = stage?.getPointerPosition();
+                if (point) {
+                  containerRef.current?.dispatchEvent(
+                    new MouseEvent("mouseup", {
+                      bubbles: true,
+                      clientX: e.evt.clientX,
+                      clientY: e.evt.clientY,
+                    })
+                  );
+                }
+              }}
+            >
+              <Layer>
+                <Image
+                  image={pageImage}
+                  width={stageSize.width}
+                  height={stageSize.height}
+                  imageSmoothingEnabled={true}
+                />
+                {children}
+              </Layer>
+            </Stage>
+          ) : (
+            <div className="flex flex-col items-center justify-center w-full h-full text-foreground-500 gap-2">
+              {error ? (
+                <>
+                  <div className="text-red-500">Error loading PDF</div>
+                  <div className="text-sm text-foreground-400">{error}</div>
+                </>
+              ) : loading ? (
+                <>
+                  <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div>Loading PDF...</div>
+                </>
+              ) : (
+                <div>No PDF loaded</div>
+              )}
+            </div>
+          )}
         </div>
       </ScrollShadow>
 

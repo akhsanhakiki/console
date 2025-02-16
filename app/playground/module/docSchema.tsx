@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import type { UploadedDocument } from "./docUpload";
 import {
   FiChevronDown,
@@ -11,6 +11,7 @@ import {
 } from "react-icons/fi";
 import DocPreview from "../components/docPreview";
 import { Select, SelectItem, Button } from "@heroui/react";
+import { Rect, Transformer } from "react-konva";
 
 interface Rectangle {
   id: string;
@@ -23,126 +24,97 @@ interface Rectangle {
 
 type CursorMode = "draw" | "drag";
 
-interface ResizeHandle {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-type ResizeHandles = {
-  [key: string]: ResizeHandle;
-};
-
-interface MousePosition {
-  x: number;
-  y: number;
-  pdfWidth: number;
-  pdfHeight: number;
-}
-
-// Create a memoized DocPreview component
-const MemoizedDocPreview = memo(DocPreview);
-
-// Create a memoized drawing overlay component
-const DrawingOverlay = memo(
+// Create a memoized rectangle component
+const KonvaRectangle = memo(
   ({
-    rectangles,
-    selectedRect,
-    currentRect,
+    rect,
+    isSelected,
+    onSelect,
+    onChange,
     cursorMode,
-    getResizeHandles,
-    onRectClick,
   }: {
-    rectangles: Rectangle[];
-    selectedRect: Rectangle | null;
-    currentRect: Rectangle | null;
+    rect: Rectangle;
+    isSelected: boolean;
+    onSelect: () => void;
+    onChange: (newAttrs: Rectangle) => void;
     cursorMode: CursorMode;
-    getResizeHandles: (rect: Rectangle) => ResizeHandles;
-    onRectClick: (rect: Rectangle) => void;
-  }) => (
-    <>
-      {rectangles.map((rect) => (
-        <div
-          key={rect.id}
-          className={`absolute border-2 ${
-            selectedRect?.id === rect.id
-              ? "border-primary-500"
-              : "border-primary-300"
-          }`}
-          style={{
-            left: `${rect.x}px`,
-            top: `${rect.y}px`,
-            width: `${rect.width}px`,
-            height: `${rect.height}px`,
-            cursor: cursorMode === "drag" ? "move" : "default",
-            pointerEvents: cursorMode === "drag" ? "auto" : "none",
+  }) => {
+    const shapeRef = React.useRef<any>(null);
+    const transformerRef = React.useRef<any>(null);
+
+    React.useEffect(() => {
+      if (isSelected && transformerRef.current && shapeRef.current) {
+        transformerRef.current.nodes([shapeRef.current]);
+        transformerRef.current.getLayer().batchDraw();
+      }
+    }, [isSelected]);
+
+    return (
+      <>
+        <Rect
+          ref={shapeRef}
+          {...rect}
+          draggable={cursorMode === "drag"}
+          stroke={isSelected ? "#0066FF" : "#0066FF80"}
+          strokeWidth={2}
+          fill="transparent"
+          onMouseDown={onSelect}
+          onDragEnd={(e) => {
+            onChange({
+              ...rect,
+              x: e.target.x(),
+              y: e.target.y(),
+            });
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRectClick(rect);
-          }}
-        >
-          {selectedRect?.id === rect.id && cursorMode === "draw" && (
-            <>
-              {Object.entries(getResizeHandles(rect)).map(
-                ([position, handle]) => (
-                  <div
-                    key={position}
-                    className="absolute w-2 h-2 bg-primary-500 border border-white"
-                    style={{
-                      left: `${handle.x - rect.x}px`,
-                      top: `${handle.y - rect.y}px`,
-                      cursor:
-                        position.includes("Left") || position.includes("Right")
-                          ? "ew-resize"
-                          : position.includes("Top") ||
-                              position.includes("Bottom")
-                            ? "ns-resize"
-                            : "nwse-resize",
-                      pointerEvents: "auto",
-                    }}
-                  />
-                )
-              )}
-            </>
-          )}
-        </div>
-      ))}
-      {currentRect && (
-        <div
-          className="absolute border-2 border-primary-500"
-          style={{
-            left: `${currentRect.x}px`,
-            top: `${currentRect.y}px`,
-            width: `${currentRect.width}px`,
-            height: `${currentRect.height}px`,
+          onTransformEnd={(e) => {
+            const node = shapeRef.current;
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
+
+            node.scaleX(1);
+            node.scaleY(1);
+
+            onChange({
+              ...rect,
+              x: node.x(),
+              y: node.y(),
+              width: Math.max(5, node.width() * scaleX),
+              height: Math.max(5, node.height() * scaleY),
+            });
           }}
         />
-      )}
-    </>
-  )
+        {isSelected && cursorMode === "draw" && (
+          <Transformer
+            ref={transformerRef}
+            boundBoxFunc={(oldBox, newBox) => {
+              // Limit resize
+              const minWidth = 5;
+              const minHeight = 5;
+              if (newBox.width < minWidth || newBox.height < minHeight) {
+                return oldBox;
+              }
+              return newBox;
+            }}
+          />
+        )}
+      </>
+    );
+  }
 );
+
+KonvaRectangle.displayName = "KonvaRectangle";
 
 const DocSchema = () => {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [selectedDocument, setSelectedDocument] =
     useState<UploadedDocument | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [rectangles, setRectangles] = useState<Rectangle[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentRect, setCurrentRect] = useState<Rectangle | null>(null);
   const [selectedRect, setSelectedRect] = useState<Rectangle | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeHandle, setResizeHandle] = useState<string | null>(null);
   const [cursorMode, setCursorMode] = useState<CursorMode>("draw");
-  const [isDragging, setIsDragging] = useState(false);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const startPointRef = useRef<{ x: number; y: number } | null>(null);
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const startPointRef = React.useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     // Load documents from session storage
@@ -171,204 +143,18 @@ const DocSchema = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const getMousePosition = useCallback((e: React.MouseEvent): MousePosition => {
-    if (!pdfContainerRef.current)
-      return { x: 0, y: 0, pdfWidth: 0, pdfHeight: 0 };
-
-    // Get the PDF page element
-    const pdfPage = pdfContainerRef.current.querySelector(".react-pdf__Page");
-    const pdfCanvas = pdfContainerRef.current.querySelector(
-      ".react-pdf__Page__canvas"
-    );
-    if (!pdfPage || !pdfCanvas)
-      return { x: 0, y: 0, pdfWidth: 0, pdfHeight: 0 };
-
-    // Get the canvas bounds
-    const pageRect = pdfPage.getBoundingClientRect();
-    const canvasRect = pdfCanvas.getBoundingClientRect();
-
-    // Calculate position relative to the PDF page
-    const x = e.clientX - pageRect.left;
-    const y = e.clientY - pageRect.top;
-
-    // Get canvas dimensions
-    const pdfWidth = canvasRect.width;
-    const pdfHeight = canvasRect.height;
-
-    // Clamp coordinates to canvas bounds
-    const clampedX = Math.max(0, Math.min(x, pdfWidth));
-    const clampedY = Math.max(0, Math.min(y, pdfHeight));
-
-    return {
-      x: clampedX,
-      y: clampedY,
-      pdfWidth,
-      pdfHeight,
-    };
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const { x, y, pdfWidth, pdfHeight } = getMousePosition(e);
-
-      // Only update cursor position if within PDF bounds
-      if (x >= 0 && x <= pdfWidth && y >= 0 && y <= pdfHeight) {
-        setCursorPosition({ x: Math.round(x), y: Math.round(y) });
-      }
-
-      if (!startPointRef.current && !isDragging) return;
-
-      if (isDragging && selectedRect) {
-        if (!dragStartRef.current) return;
-        const newX = Math.max(
-          0,
-          Math.min(x - dragStartRef.current.x, pdfWidth - selectedRect.width)
-        );
-        const newY = Math.max(
-          0,
-          Math.min(y - dragStartRef.current.y, pdfHeight - selectedRect.height)
-        );
-
-        const updatedRect = {
-          ...selectedRect,
-          x: newX,
-          y: newY,
-        };
-
-        setSelectedRect(updatedRect);
-        setRectangles((rects) =>
-          rects.map((r) => (r.id === selectedRect.id ? updatedRect : r))
-        );
-        return;
-      }
-
-      if (isResizing && selectedRect && resizeHandle && startPointRef.current) {
-        e.preventDefault();
-        const dx = x - startPointRef.current.x;
-        const dy = y - startPointRef.current.y;
-
-        const newRect = { ...selectedRect };
-
-        // Helper function to clamp rectangle within PDF bounds
-        const clampRect = (rect: Rectangle) => {
-          rect.x = Math.max(0, Math.min(rect.x, pdfWidth - rect.width));
-          rect.y = Math.max(0, Math.min(rect.y, pdfHeight - rect.height));
-          rect.width = Math.max(5, Math.min(rect.width, pdfWidth - rect.x));
-          rect.height = Math.max(5, Math.min(rect.height, pdfHeight - rect.y));
-          return rect;
-        };
-
-        switch (resizeHandle) {
-          case "top":
-            newRect.y += dy;
-            newRect.height -= dy;
-            break;
-          case "bottom":
-            newRect.height = y - newRect.y;
-            break;
-          case "left":
-            newRect.x += dx;
-            newRect.width -= dx;
-            break;
-          case "right":
-            newRect.width = x - newRect.x;
-            break;
-          case "topLeft":
-            newRect.x += dx;
-            newRect.y += dy;
-            newRect.width -= dx;
-            newRect.height -= dy;
-            break;
-          case "topRight":
-            newRect.y += dy;
-            newRect.width = x - newRect.x;
-            newRect.height -= dy;
-            break;
-          case "bottomLeft":
-            newRect.x += dx;
-            newRect.width -= dx;
-            newRect.height = y - newRect.y;
-            break;
-          case "bottomRight":
-            newRect.width = x - newRect.x;
-            newRect.height = y - newRect.y;
-            break;
-        }
-
-        if (newRect.width > 0 && newRect.height > 0) {
-          const clampedRect = clampRect(newRect);
-          setSelectedRect(clampedRect);
-          setRectangles((rects) =>
-            rects.map((r) => (r.id === clampedRect.id ? clampedRect : r))
-          );
-        }
-        startPointRef.current = { x, y };
-      } else if (isDrawing && currentRect) {
-        const width = x - currentRect.x;
-        const height = y - currentRect.y;
-
-        // Clamp the rectangle dimensions within PDF bounds
-        const clampedWidth = Math.min(width, pdfWidth - currentRect.x);
-        const clampedHeight = Math.min(height, pdfHeight - currentRect.y);
-
-        setCurrentRect({
-          ...currentRect,
-          width: clampedWidth,
-          height: clampedHeight,
-        });
-      }
-    },
-    [isDrawing, isDragging, isResizing, selectedRect, currentRect, resizeHandle]
-  );
-
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      const { x, y, pdfWidth, pdfHeight } = getMousePosition(e);
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (cursorMode === "drag") return;
 
-      // Only allow drawing/dragging if within PDF bounds
-      if (x < 0 || x > pdfWidth || y < 0 || y > pdfHeight) return;
-
-      if (cursorMode === "drag") {
-        const clickedRect = rectangles.find(
-          (rect) =>
-            x >= rect.x &&
-            x <= rect.x + rect.width &&
-            y >= rect.y &&
-            y <= rect.y + rect.height
-        );
-
-        if (clickedRect) {
-          setSelectedRect(clickedRect);
-          setIsDragging(true);
-          dragStartRef.current = { x: x - clickedRect.x, y: y - clickedRect.y };
-          return;
-        }
-        setSelectedRect(null);
-        return;
-      }
-
-      // Drawing mode
-      if (selectedRect) {
-        const handles = getResizeHandles(selectedRect);
-        const clickedHandle = Object.entries(handles).find(
-          ([_, rect]) =>
-            x >= rect.x &&
-            x <= rect.x + rect.width &&
-            y >= rect.y &&
-            y <= rect.y + rect.height
-        );
-
-        if (clickedHandle) {
-          setIsResizing(true);
-          setResizeHandle(clickedHandle[0]);
-          startPointRef.current = { x, y };
-          return;
-        }
-      }
+      const stage = e.currentTarget;
+      const rect = stage.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
       setIsDrawing(true);
       startPointRef.current = { x, y };
+
       const newRect = {
         id: Date.now().toString(),
         x,
@@ -377,14 +163,35 @@ const DocSchema = () => {
         height: 0,
         pageNumber: currentPage,
       };
+
       setCurrentRect(newRect);
     },
-    [cursorMode, selectedRect, rectangles, currentPage]
+    [cursorMode, currentPage]
   );
 
-  const handleMouseUp = () => {
-    if (isDrawing && currentRect && currentRect.width && currentRect.height) {
-      // Normalize negative width/height
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!isDrawing || !currentRect || !startPointRef.current) return;
+
+      const stage = e.target as HTMLElement;
+      const rect = stage.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const width = x - startPointRef.current.x;
+      const height = y - startPointRef.current.y;
+
+      setCurrentRect({
+        ...currentRect,
+        width,
+        height,
+      });
+    },
+    [isDrawing, currentRect]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    if (isDrawing && currentRect) {
       const normalizedRect = {
         ...currentRect,
         x:
@@ -406,66 +213,15 @@ const DocSchema = () => {
     }
 
     setIsDrawing(false);
-    setIsResizing(false);
-    setResizeHandle(null);
     setCurrentRect(null);
-    setIsDragging(false);
     startPointRef.current = null;
-    dragStartRef.current = null;
-  };
+  }, [isDrawing, currentRect, rectangles]);
 
-  const getResizeHandles = (rect: Rectangle): ResizeHandles => {
-    const handleSize = 8;
-    return {
-      topLeft: {
-        x: rect.x - handleSize / 2,
-        y: rect.y - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      top: {
-        x: rect.x + rect.width / 2 - handleSize / 2,
-        y: rect.y - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      topRight: {
-        x: rect.x + rect.width - handleSize / 2,
-        y: rect.y - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      right: {
-        x: rect.x + rect.width - handleSize / 2,
-        y: rect.y + rect.height / 2 - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      bottomRight: {
-        x: rect.x + rect.width - handleSize / 2,
-        y: rect.y + rect.height - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      bottom: {
-        x: rect.x + rect.width / 2 - handleSize / 2,
-        y: rect.y + rect.height - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      bottomLeft: {
-        x: rect.x - handleSize / 2,
-        y: rect.y + rect.height - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-      left: {
-        x: rect.x - handleSize / 2,
-        y: rect.y + rect.height / 2 - handleSize / 2,
-        width: handleSize,
-        height: handleSize,
-      },
-    };
+  const handleRectChange = (newRect: Rectangle) => {
+    setRectangles(
+      rectangles.map((rect) => (rect.id === newRect.id ? newRect : rect))
+    );
+    setSelectedRect(newRect);
   };
 
   const deleteRectangle = (id: string) => {
@@ -473,15 +229,6 @@ const DocSchema = () => {
     if (selectedRect?.id === id) {
       setSelectedRect(null);
     }
-  };
-
-  const handleRectClick = useCallback((rect: Rectangle) => {
-    setSelectedRect(rect);
-  }, []);
-
-  // Add currentPage state handler
-  const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
   };
 
   if (documents.length === 0) {
@@ -495,61 +242,38 @@ const DocSchema = () => {
   return (
     <div className="flex h-[calc(100vh-170px)]">
       <div className="flex flex-col flex-grow overflow-hidden">
-        {/* PDF Preview with Drawing Canvas */}
         <div
           className="h-full relative select-none bg-foreground-100"
-          ref={pdfContainerRef}
-          style={{ cursor: cursorMode === "draw" ? "crosshair" : "default" }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
         >
-          <div className="h-full">
-            <MemoizedDocPreview
-              selectedDocument={selectedDocument}
-              onPageChange={handlePageChange}
-              currentPage={currentPage}
-            />
-          </div>
-          <div
-            className="absolute z-[1]"
-            style={{
-              position: "absolute",
-              top:
-                (
-                  pdfContainerRef.current?.querySelector(
-                    ".react-pdf__Page"
-                  ) as HTMLElement
-                )?.offsetTop || 0,
-              left:
-                (
-                  pdfContainerRef.current?.querySelector(
-                    ".react-pdf__Page"
-                  ) as HTMLElement
-                )?.offsetLeft || 0,
-              width:
-                pdfContainerRef.current?.querySelector(
-                  ".react-pdf__Page__canvas"
-                )?.clientWidth || "100%",
-              height:
-                pdfContainerRef.current?.querySelector(
-                  ".react-pdf__Page__canvas"
-                )?.clientHeight || "100%",
-              pointerEvents: "auto",
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+          <DocPreview
+            selectedDocument={selectedDocument}
+            onPageChange={setCurrentPage}
+            currentPage={currentPage}
           >
-            <DrawingOverlay
-              rectangles={rectangles.filter(
-                (rect) => rect.pageNumber === currentPage
-              )}
-              selectedRect={selectedRect}
-              currentRect={currentRect}
-              cursorMode={cursorMode}
-              getResizeHandles={getResizeHandles}
-              onRectClick={handleRectClick}
-            />
-          </div>
+            {rectangles
+              .filter((rect) => rect.pageNumber === currentPage)
+              .map((rect) => (
+                <KonvaRectangle
+                  key={rect.id}
+                  rect={rect}
+                  isSelected={selectedRect?.id === rect.id}
+                  onSelect={() => setSelectedRect(rect)}
+                  onChange={handleRectChange}
+                  cursorMode={cursorMode}
+                />
+              ))}
+            {currentRect && (
+              <Rect
+                {...currentRect}
+                stroke="#0066FF"
+                strokeWidth={2}
+                fill="transparent"
+              />
+            )}
+          </DocPreview>
         </div>
       </div>
 
@@ -604,9 +328,6 @@ const DocSchema = () => {
                 startContent={<FiMove className="w-4 h-4" />}
                 isIconOnly
               ></Button>
-            </div>
-            <div className="text-xs text-foreground-500">
-              {cursorPosition.x}, {cursorPosition.y}
             </div>
           </div>
         </div>
