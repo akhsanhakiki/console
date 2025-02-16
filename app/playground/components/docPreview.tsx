@@ -11,16 +11,30 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 
 interface DocPreviewProps {
   selectedDocument: UploadedDocument | null;
+  onPageChange?: (pageNumber: number) => void;
+  currentPage?: number;
 }
 
-const DocPreview = ({ selectedDocument }: DocPreviewProps) => {
+const DocPreview = ({
+  selectedDocument,
+  onPageChange,
+  currentPage: externalPage,
+}: DocPreviewProps) => {
   const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(1);
   const [scale, setScale] = useState(1.0);
 
+  // Use external page if provided, otherwise use internal state
+  const currentPage = externalPage || internalPage;
+
   useEffect(() => {
-    setCurrentPage(1);
+    setInternalPage(1);
   }, [selectedDocument]);
+
+  const handlePageChange = (newPage: number) => {
+    setInternalPage(newPage);
+    onPageChange?.(newPage);
+  };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -82,7 +96,7 @@ const DocPreview = ({ selectedDocument }: DocPreviewProps) => {
             <Button
               size="sm"
               variant="flat"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               isDisabled={currentPage <= 1}
             >
               Previous
@@ -94,7 +108,7 @@ const DocPreview = ({ selectedDocument }: DocPreviewProps) => {
               size="sm"
               variant="flat"
               onClick={() =>
-                setCurrentPage((prev) => Math.min(numPages, prev + 1))
+                handlePageChange(Math.min(numPages, currentPage + 1))
               }
               isDisabled={currentPage >= numPages}
             >

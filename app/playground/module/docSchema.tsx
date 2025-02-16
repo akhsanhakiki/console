@@ -142,6 +142,7 @@ const DocSchema = () => {
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     // Load documents from session storage
@@ -374,11 +375,11 @@ const DocSchema = () => {
         y,
         width: 0,
         height: 0,
-        pageNumber: 1,
+        pageNumber: currentPage,
       };
       setCurrentRect(newRect);
     },
-    [cursorMode, selectedRect, rectangles]
+    [cursorMode, selectedRect, rectangles, currentPage]
   );
 
   const handleMouseUp = () => {
@@ -478,6 +479,11 @@ const DocSchema = () => {
     setSelectedRect(rect);
   }, []);
 
+  // Add currentPage state handler
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
   if (documents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-foreground-500">
@@ -496,7 +502,11 @@ const DocSchema = () => {
           style={{ cursor: cursorMode === "draw" ? "crosshair" : "default" }}
         >
           <div className="h-full">
-            <MemoizedDocPreview selectedDocument={selectedDocument} />
+            <MemoizedDocPreview
+              selectedDocument={selectedDocument}
+              onPageChange={handlePageChange}
+              currentPage={currentPage}
+            />
           </div>
           <div
             className="absolute z-[1]"
@@ -530,7 +540,9 @@ const DocSchema = () => {
             onMouseLeave={handleMouseUp}
           >
             <DrawingOverlay
-              rectangles={rectangles}
+              rectangles={rectangles.filter(
+                (rect) => rect.pageNumber === currentPage
+              )}
               selectedRect={selectedRect}
               currentRect={currentRect}
               cursorMode={cursorMode}
@@ -616,11 +628,18 @@ const DocSchema = () => {
             {rectangles.map((rect) => (
               <div
                 key={rect.id}
-                className={`p-2 rounded border ${
+                className={`p-2 rounded border cursor-pointer ${
                   selectedRect?.id === rect.id
                     ? "border-primary-500 bg-primary-50"
-                    : "border-foreground-200"
+                    : "border-foreground-200 hover:border-primary-300 hover:bg-primary-50/50"
                 }`}
+                onClick={() => {
+                  setSelectedRect(rect);
+                  // If the rectangle is on a different page, switch to that page
+                  if (rect.pageNumber !== currentPage) {
+                    setCurrentPage(rect.pageNumber);
+                  }
+                }}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium">
@@ -631,7 +650,10 @@ const DocSchema = () => {
                       size="sm"
                       variant="flat"
                       isIconOnly
-                      onPress={() => setSelectedRect(rect)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRect(rect);
+                      }}
                     >
                       <FiEdit2 className="w-3 h-3" />
                     </Button>
@@ -639,13 +661,17 @@ const DocSchema = () => {
                       size="sm"
                       variant="flat"
                       isIconOnly
-                      onPress={() => deleteRectangle(rect.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteRectangle(rect.id);
+                      }}
                     >
                       <FiTrash2 className="w-3 h-3" />
                     </Button>
                   </div>
                 </div>
                 <div className="text-xs text-foreground-500">
+                  <div>Page: {rect.pageNumber}</div>
                   <div>X: {Math.round(rect.x)}</div>
                   <div>Y: {Math.round(rect.y)}</div>
                   <div>Width: {Math.round(rect.width)}</div>
