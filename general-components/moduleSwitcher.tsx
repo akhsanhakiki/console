@@ -1,15 +1,17 @@
 import { Button } from "@heroui/react";
 import React from "react";
 
-const ModuleSwitcher = ({
+interface ModuleSwitcherProps<T extends string> {
+  isActive: boolean;
+  title: T;
+  setCurrentModule: (module: T) => void;
+}
+
+const ModuleSwitcher = <T extends string>({
   isActive,
   title,
   setCurrentModule,
-}: {
-  isActive: boolean;
-  title: string;
-  setCurrentModule: (module: string) => void;
-}) => {
+}: ModuleSwitcherProps<T>) => {
   return (
     <div
       className={`
@@ -28,7 +30,7 @@ const ModuleSwitcher = ({
               : "border-foreground-300 text-foreground-900 font-medium h-8 hover:border-[#49FFDB]"
           }
         `}
-        onPress={() => setCurrentModule(title as any)}
+        onPress={() => setCurrentModule(title)}
       >
         {title}
       </Button>

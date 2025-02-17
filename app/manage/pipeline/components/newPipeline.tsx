@@ -5,50 +5,16 @@ import PreProcess from "../modules/preProcess";
 import DocumentSchema from "../modules/documentSchema";
 import GeneralInfo from "../modules/generalInfo";
 import ContractSchema from "../modules/contractSchema";
+import ModuleSwitcher from "@/general-components/moduleSwitcher";
 
-const ModuleNavigator = ({
-  isActive,
-  title,
-  setCurrentModule,
-}: {
-  isActive: boolean;
-  title: string;
-  setCurrentModule: (
-    module:
-      | "General Info"
-      | "Document loader"
-      | "Pre-process"
-      | "Document schema"
-      | "Contract schema"
-  ) => void;
-}) => {
-  return (
-    <div
-      className={`
-        flex items-center justify-center rounded-lg w-fit h-8 transition-all duration-300 ease-in-out
-        ${isActive ? "p-[2px] bg-gradient-to-r from-[#49FFDB] to-[#00E5FF]" : "p-[2px] bg-transparent"}
-      `}
-    >
-      <Button
-        variant="bordered"
-        size="sm"
-        className={`
-          w-full h-full transition-all duration-200 ease-in-out font-poppins
-          ${
-            isActive
-              ? "bg-background border-none text-foreground-900 font-medium"
-              : "border-foreground-300 text-foreground-900 font-medium h-8 hover:border-[#49FFDB]"
-          }
-        `}
-        onPress={() => setCurrentModule(title as any)}
-      >
-        {title}
-      </Button>
-    </div>
-  );
-};
+type ModuleType =
+  | "General Info"
+  | "Document loader"
+  | "Pre-process"
+  | "Document schema"
+  | "Contract schema";
 
-const ModuleList = [
+const ModuleList: Array<{ title: ModuleType }> = [
   {
     title: "General Info",
   },
@@ -67,19 +33,14 @@ const ModuleList = [
 ];
 
 const NewPipeline = () => {
-  const [currentModule, setCurrentModule] = useState<
-    | "General Info"
-    | "Document loader"
-    | "Pre-process"
-    | "Document schema"
-    | "Contract schema"
-  >("General Info");
+  const [currentModule, setCurrentModule] =
+    useState<ModuleType>("General Info");
 
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex flex-row gap-2 items-center">
         {ModuleList.map((module) => (
-          <ModuleNavigator
+          <ModuleSwitcher<ModuleType>
             key={module.title}
             isActive={currentModule === module.title}
             title={module.title}

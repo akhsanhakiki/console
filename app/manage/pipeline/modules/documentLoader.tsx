@@ -1,13 +1,50 @@
-import React, { useState } from "react";
+"use client";
+import React, { useState, useRef } from "react";
 import { CheckboxGroup, Checkbox } from "@heroui/react";
-import { MdTune } from "react-icons/md";
+import { MdTune, MdFileUpload } from "react-icons/md";
 import { Input } from "@heroui/react";
-import { RadioGroup, Radio } from "@heroui/react";
-import { MdFileUpload } from "react-icons/md";
 import { Button } from "@heroui/react";
 
-const documentLoader = () => {
-  const [fileName, setFileName] = useState("Document.pdf");
+interface DocumentInfo {
+  id: string;
+  name: string;
+  content: string;
+  size: number;
+  password?: string;
+  format: string[];
+}
+
+const DocumentLoader = () => {
+  const [fileName, setFileName] = useState("No file selected");
+  const [documentPassword, setDocumentPassword] = useState("");
+  const [documentFormat, setDocumentFormat] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const content = e.target?.result as string;
+      const documentInfo: DocumentInfo = {
+        id: Date.now().toString(),
+        name: file.name,
+        content,
+        size: file.size,
+        password: documentPassword,
+        format: documentFormat,
+      };
+
+      // Save to session storage
+      sessionStorage.setItem("uploadedDocument", JSON.stringify(documentInfo));
+      setFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -30,10 +67,18 @@ const documentLoader = () => {
             Upload the base document for annotation later in the pipeline.
           </p>
           <div className="flex flex-row gap-2 items-center">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept=".pdf"
+              onChange={handleFileUpload}
+            />
             <Button
               variant="bordered"
               size="sm"
               startContent={<MdFileUpload />}
+              onPress={() => fileInputRef.current?.click()}
             >
               Upload
             </Button>
@@ -46,11 +91,14 @@ const documentLoader = () => {
           labelPlacement="outside"
           placeholder="Enter the document password if any"
           type="password"
+          value={documentPassword}
+          onChange={(e) => setDocumentPassword(e.target.value)}
         />
 
         <div className="flex flex-row gap-1">
           <CheckboxGroup
-            defaultValue={["buenos-aires", "london"]}
+            value={documentFormat}
+            onChange={(values) => setDocumentFormat(values as string[])}
             label={
               <span className="text-sm font-medium font-poppins text-foreground-900">
                 Document Format
@@ -63,8 +111,7 @@ const documentLoader = () => {
                   Native PDF
                 </h1>
                 <p className="text-sm font-normal font-poppins text-gray-500">
-                  A PDF generated from scanned documents or photos, preserving
-                  appearance but not allowing edits.
+                  A PDF with selectable text and preserved structure.
                 </p>
               </div>
             </Checkbox>
@@ -86,4 +133,4 @@ const documentLoader = () => {
   );
 };
 
-export default documentLoader;
+export default DocumentLoader;
