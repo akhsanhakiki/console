@@ -21,11 +21,16 @@ if (typeof window !== "undefined") {
 
 interface Rectangle {
   id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  // Store normalized coordinates (0-1)
+  normalizedX: number;
+  normalizedY: number;
+  normalizedWidth: number;
+  normalizedHeight: number;
   pageNumber: number;
+  tokens?: Array<{
+    text: string;
+    confidence: number;
+  }>;
 }
 
 interface DocumentInfo {
@@ -49,7 +54,12 @@ const KonvaRectangle = React.memo(
     cursorMode,
     onHover,
   }: {
-    rect: Rectangle;
+    rect: Rectangle & {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
     isSelected: boolean;
     onSelect: () => void;
     onChange: (newAttrs: Rectangle) => void;
@@ -77,20 +87,28 @@ const KonvaRectangle = React.memo(
       node.scaleX(1);
       node.scaleY(1);
 
-      onChange({
+      const stage = node.getStage();
+      if (!stage) return;
+
+      const updatedRect = {
         ...rect,
-        x: node.x(),
-        y: node.y(),
-        width: Math.max(5, node.width() * scaleX),
-        height: Math.max(5, node.height() * scaleY),
-      });
+        normalizedX: node.x() / stage.width(),
+        normalizedY: node.y() / stage.height(),
+        normalizedWidth: Math.max(5, node.width() * scaleX) / stage.width(),
+        normalizedHeight: Math.max(5, node.height() * scaleY) / stage.height(),
+      };
+
+      onChange(updatedRect);
     };
 
     return (
       <>
         <Rect
           ref={shapeRef}
-          {...rect}
+          x={rect.x}
+          y={rect.y}
+          width={rect.width}
+          height={rect.height}
           draggable={isSelected}
           stroke={
             isSelected ? "#0066FF" : isHovered ? "#0066FFB0" : "#0066FF80"
@@ -125,17 +143,23 @@ const KonvaRectangle = React.memo(
             });
           }}
           onDragMove={(e) => {
-            onChange({
+            const stage = e.target.getStage();
+            if (!stage) return;
+
+            const updatedRect = {
               ...rect,
-              x: e.target.x(),
-              y: e.target.y(),
-            });
+              normalizedX: e.target.x() / stage.width(),
+              normalizedY: e.target.y() / stage.height(),
+            };
+
+            onChange(updatedRect);
           }}
           onDragEnd={(e) => {
             e.target.setAttrs({
               shadowBlur: 0,
               shadowOpacity: 0,
             });
+            handleTransform();
           }}
           onTransform={handleTransform}
           onTransformStart={(e) => {
@@ -211,6 +235,19 @@ const DocumentSchema = () => {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<
+    Array<{
+      text: string;
+      bounding_box: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
+      id: string;
+      confidence: number;
+    }>
+  >([]);
 
   // Rectangle editing state
   const [rectangles, setRectangles] = useState<Rectangle[]>([]);
@@ -228,6 +265,11 @@ const DocumentSchema = () => {
 
   useEffect(() => {
     loadImage();
+    // Load tokens for current page
+    const currentPageData = DocSample[currentPage - 1];
+    if (currentPageData?.tokens) {
+      setTokens(currentPageData.tokens);
+    }
   }, [currentPage]);
 
   const loadImage = async () => {
@@ -304,10 +346,10 @@ const DocumentSchema = () => {
       return rectangles.some(
         (rect) =>
           rect.pageNumber === currentPage &&
-          x >= rect.x &&
-          x <= rect.x + rect.width &&
-          y >= rect.y &&
-          y <= rect.y + rect.height
+          x >= rect.normalizedX &&
+          x <= rect.normalizedX + rect.normalizedWidth &&
+          y >= rect.normalizedY &&
+          y <= rect.normalizedY + rect.normalizedHeight
       );
     },
     [rectangles, currentPage]
@@ -319,10 +361,10 @@ const DocumentSchema = () => {
         (rect) =>
           rect.pageNumber === currentPage &&
           !(
-            newRect.x + newRect.width < rect.x ||
-            newRect.x > rect.x + rect.width ||
-            newRect.y + newRect.height < rect.y ||
-            newRect.y > rect.y + rect.height
+            newRect.normalizedX + newRect.normalizedWidth < rect.normalizedX ||
+            newRect.normalizedX > rect.normalizedX + rect.normalizedWidth ||
+            newRect.normalizedY + newRect.normalizedHeight < rect.normalizedY ||
+            newRect.normalizedY > rect.normalizedY + rect.normalizedHeight
           )
       );
     },
@@ -337,13 +379,21 @@ const DocumentSchema = () => {
       if (!pdfCanvas) return { x: 0, y: 0 };
 
       const pdfRect = pdfCanvas.getBoundingClientRect();
+      const currentPageData = DocSample[currentPage - 1];
+      const docWidth = currentPageData.dimensions?.width || 0;
+      const docHeight = currentPageData.dimensions?.height || 0;
 
+      // Get coordinates relative to the canvas
+      const x = clientX - pdfRect.left;
+      const y = clientY - pdfRect.top;
+
+      // Convert to normalized coordinates (0-1)
       return {
-        x: Math.round(clientX - pdfRect.left),
-        y: Math.round(clientY - pdfRect.top),
+        x: x / (docWidth * scale),
+        y: y / (docHeight * scale),
       };
     },
-    []
+    [currentPage, scale]
   );
 
   const handleMouseDown = useCallback(
@@ -358,14 +408,40 @@ const DocumentSchema = () => {
 
       setCurrentRect({
         id: Date.now().toString(),
-        x,
-        y,
-        width: 0,
-        height: 0,
+        normalizedX: x,
+        normalizedY: y,
+        normalizedWidth: 0,
+        normalizedHeight: 0,
         pageNumber: currentPage,
       });
     },
     [currentPage, isPointInsideAnyRect, getRelativeCoordinates]
+  );
+
+  const getTokensInRectangle = useCallback(
+    (rect: Rectangle) => {
+      const currentPageData = DocSample[currentPage - 1];
+      const docWidth = currentPageData.dimensions?.width;
+      const docHeight = currentPageData.dimensions?.height;
+
+      if (!docWidth || !docHeight) return [];
+
+      return tokens.filter((token) => {
+        // Compare normalized coordinates directly
+        const tokenCenterX =
+          token.bounding_box.x + token.bounding_box.width / 2;
+        const tokenCenterY =
+          token.bounding_box.y + token.bounding_box.height / 2;
+
+        return (
+          tokenCenterX >= rect.normalizedX &&
+          tokenCenterX <= rect.normalizedX + rect.normalizedWidth &&
+          tokenCenterY >= rect.normalizedY &&
+          tokenCenterY <= rect.normalizedY + rect.normalizedHeight
+        );
+      });
+    },
+    [tokens, currentPage]
   );
 
   const handleMouseMove = useCallback(
@@ -374,7 +450,14 @@ const DocumentSchema = () => {
         e.clientX,
         e.clientY
       );
-      setCursorPosition({ x: mouseX, y: mouseY });
+      setCursorPosition({
+        x: Math.round(
+          mouseX * DocSample[currentPage - 1].dimensions.width * scale
+        ),
+        y: Math.round(
+          mouseY * DocSample[currentPage - 1].dimensions.height * scale
+        ),
+      });
 
       if (!isDrawing || !startPointRef.current || !currentRect) return;
 
@@ -383,23 +466,30 @@ const DocumentSchema = () => {
 
       setCurrentRect({
         ...currentRect,
-        width: Math.abs(width),
-        height: Math.abs(height),
-        x: width < 0 ? mouseX : startPointRef.current.x,
-        y: height < 0 ? mouseY : startPointRef.current.y,
+        normalizedWidth: Math.abs(width),
+        normalizedHeight: Math.abs(height),
+        normalizedX: width < 0 ? mouseX : startPointRef.current.x,
+        normalizedY: height < 0 ? mouseY : startPointRef.current.y,
       });
     },
-    [isDrawing, currentRect, getRelativeCoordinates]
+    [isDrawing, currentRect, getRelativeCoordinates, currentPage, scale]
   );
 
   const handleMouseUp = useCallback(() => {
     if (isDrawing && currentRect) {
       if (
-        currentRect.width > 5 &&
-        currentRect.height > 5 &&
+        currentRect.normalizedWidth > 0.01 &&
+        currentRect.normalizedHeight > 0.01 &&
         !doesRectangleOverlap(currentRect)
       ) {
-        const newRect = { ...currentRect };
+        const tokensInRect = getTokensInRectangle(currentRect);
+        const newRect = {
+          ...currentRect,
+          tokens: tokensInRect.map((token) => ({
+            text: token.text,
+            confidence: token.confidence,
+          })),
+        };
         setRectangles([...rectangles, newRect]);
         setSelectedRect(newRect);
       }
@@ -408,13 +498,39 @@ const DocumentSchema = () => {
     setIsDrawing(false);
     setCurrentRect(null);
     startPointRef.current = null;
-  }, [isDrawing, currentRect, rectangles, doesRectangleOverlap]);
+  }, [
+    isDrawing,
+    currentRect,
+    rectangles,
+    doesRectangleOverlap,
+    getTokensInRectangle,
+  ]);
 
   const handleRectChange = (newRect: Rectangle) => {
+    // Convert screen coordinates back to normalized when rectangle changes
+    const currentPageData = DocSample[currentPage - 1];
+    const docWidth = currentPageData.dimensions?.width || 1;
+    const docHeight = currentPageData.dimensions?.height || 1;
+
+    const updatedRect = {
+      ...newRect,
+      normalizedX: newRect.normalizedX,
+      normalizedY: newRect.normalizedY,
+      normalizedWidth: newRect.normalizedWidth,
+      normalizedHeight: newRect.normalizedHeight,
+    };
+
+    // Recalculate tokens in the updated rectangle
+    const tokensInRect = getTokensInRectangle(updatedRect);
+    updatedRect.tokens = tokensInRect.map((token) => ({
+      text: token.text,
+      confidence: token.confidence,
+    }));
+
     setRectangles(
-      rectangles.map((rect) => (rect.id === newRect.id ? newRect : rect))
+      rectangles.map((rect) => (rect.id === newRect.id ? updatedRect : rect))
     );
-    setSelectedRect(newRect);
+    setSelectedRect(updatedRect);
   };
 
   const deleteRectangle = (id: string) => {
@@ -441,10 +557,10 @@ const DocumentSchema = () => {
 
       {/* Image Viewer and Editor Section */}
       <div className="flex flex-row h-[calc(100vh-240px)]">
-        <div className="flex flex-col w-10/12 overflow-hidden">
+        <div className="flex flex-col w-10/12">
           <div
             ref={stageRef}
-            className="h-full relative select-none bg-foreground-100 flex items-center justify-center"
+            className="relative flex-1 select-none bg-foreground-100"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -456,25 +572,31 @@ const DocumentSchema = () => {
           >
             <div
               ref={containerRef}
-              className="relative select-none flex items-center justify-center"
-              style={{
-                backgroundColor: "#f5f5f5",
-                width: "100%",
-                height: "100%",
-                overflow: "auto",
-              }}
+              className="absolute inset-0 select-none overflow-auto bg-foreground-100"
             >
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-gray-500">Loading image...</p>
-                </div>
-              ) : error ? (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-red-500">{error}</p>
-                </div>
-              ) : (
-                pageImage && (
-                  <div className="flex items-center justify-center p-4">
+              <div
+                style={{
+                  minWidth: "100%",
+                  minHeight: "100%",
+                  width: stageSize.width > 0 ? stageSize.width + 128 : "100%",
+                  height:
+                    stageSize.height > 0 ? stageSize.height + 128 : "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "32px",
+                }}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <p className="text-sm text-gray-500">Loading image...</p>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center justify-center">
+                    <p className="text-sm text-red-500">{error}</p>
+                  </div>
+                ) : (
+                  pageImage && (
                     <Stage
                       width={stageSize.width}
                       height={stageSize.height}
@@ -490,52 +612,90 @@ const DocumentSchema = () => {
                           height={stageSize.height}
                           imageSmoothingEnabled={true}
                         />
-                        {/* Rectangles */}
+                        {/* OCR Tokens */}
+                        {tokens.map((token) => {
+                          const currentPageData = DocSample[currentPage - 1];
+                          const docWidth = currentPageData.dimensions?.width;
+                          const docHeight = currentPageData.dimensions?.height;
+
+                          if (!docWidth || !docHeight) return null;
+
+                          // First calculate positions based on original document dimensions
+                          const originalX = token.bounding_box.x * docWidth;
+                          const originalY = token.bounding_box.y * docHeight;
+                          const originalWidth =
+                            token.bounding_box.width * docWidth;
+                          const originalHeight =
+                            token.bounding_box.height * docHeight;
+
+                          // Then apply the current scale
+                          const x = originalX * scale;
+                          const y = originalY * scale;
+                          const width = originalWidth * scale;
+                          const height = originalHeight * scale;
+
+                          return (
+                            <Rect
+                              key={token.id}
+                              x={x}
+                              y={y}
+                              width={width}
+                              height={height}
+                              stroke="#0066FF80"
+                              strokeWidth={1.5}
+                              fill="transparent"
+                            />
+                          );
+                        })}
+                        {/* User drawn Rectangles */}
                         {rectangles
                           .filter((rect) => rect.pageNumber === currentPage)
-                          .map((rect) => (
-                            <KonvaRectangle
-                              key={rect.id}
-                              rect={{
-                                ...rect,
-                                x: rect.x * scale,
-                                y: rect.y * scale,
-                                width: rect.width * scale,
-                                height: rect.height * scale,
-                              }}
-                              isSelected={selectedRect?.id === rect.id}
-                              onChange={(newRect) => {
-                                handleRectChange({
-                                  ...newRect,
-                                  x: newRect.x / scale,
-                                  y: newRect.y / scale,
-                                  width: newRect.width / scale,
-                                  height: newRect.height / scale,
-                                });
-                              }}
-                              onSelect={() => setSelectedRect(rect)}
-                              cursorMode={cursorMode}
-                              onHover={(isHovering) =>
-                                (isHoveringRect.current = isHovering)
-                              }
-                            />
-                          ))}
+                          .map((rect) => {
+                            // Calculate screen coordinates
+                            const screenRect = {
+                              ...rect,
+                              x: rect.normalizedX * stageSize.width,
+                              y: rect.normalizedY * stageSize.height,
+                              width: rect.normalizedWidth * stageSize.width,
+                              height: rect.normalizedHeight * stageSize.height,
+                            };
+
+                            return (
+                              <KonvaRectangle
+                                key={rect.id}
+                                rect={screenRect}
+                                isSelected={selectedRect?.id === rect.id}
+                                onChange={(newRect) => {
+                                  handleRectChange(newRect);
+                                }}
+                                onSelect={() => setSelectedRect(rect)}
+                                cursorMode={cursorMode}
+                                onHover={(isHovering) =>
+                                  (isHoveringRect.current = isHovering)
+                                }
+                              />
+                            );
+                          })}
                         {/* Current drawing rectangle */}
                         {currentRect && (
                           <Rect
-                            x={currentRect.x}
-                            y={currentRect.y}
-                            width={currentRect.width}
-                            height={currentRect.height}
+                            x={currentRect.normalizedX * stageSize.width}
+                            y={currentRect.normalizedY * stageSize.height}
+                            width={
+                              currentRect.normalizedWidth * stageSize.width
+                            }
+                            height={
+                              currentRect.normalizedHeight * stageSize.height
+                            }
                             stroke="#00ff00"
                             strokeWidth={2}
                           />
                         )}
                       </Layer>
                     </Stage>
-                  </div>
-                )
-              )}
+                  )
+                )}
+              </div>
             </div>
           </div>
           {/* Navigation Footer */}
@@ -645,26 +805,53 @@ const DocumentSchema = () => {
                   .map((rect) => (
                     <div
                       key={rect.id}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer ${
+                      className={`flex flex-col gap-2 p-2 rounded cursor-pointer ${
                         selectedRect?.id === rect.id
                           ? "bg-primary/10"
                           : "hover:bg-foreground-100"
                       }`}
                       onClick={() => setSelectedRect(rect)}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between">
                         <div className="text-xs font-mono">
-                          ({rect.x}, {rect.y})
+                          (
+                          {Math.round(
+                            rect.normalizedX *
+                              DocSample[currentPage - 1].dimensions.width *
+                              scale
+                          )}
+                          ,{" "}
+                          {Math.round(
+                            rect.normalizedY *
+                              DocSample[currentPage - 1].dimensions.height *
+                              scale
+                          )}
+                          )
                         </div>
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          isIconOnly
+                          onPress={() => deleteRectangle(rect.id)}
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="flat"
-                        isIconOnly
-                        onPress={() => deleteRectangle(rect.id)}
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </Button>
+                      {rect.tokens && rect.tokens.length > 0 && (
+                        <div className="text-xs text-foreground-600 bg-foreground-50 p-2 rounded">
+                          {rect.tokens.map((token, idx) => (
+                            <div
+                              key={idx}
+                              className="flex justify-between items-center"
+                            >
+                              <span>{token.text}</span>
+                              <span className="text-foreground-400">
+                                {Math.round(token.confidence * 100)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>
