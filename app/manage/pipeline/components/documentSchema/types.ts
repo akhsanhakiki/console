@@ -43,3 +43,17 @@ export interface DocumentDimensions {
   width: number;
   height: number;
 }
+
+export interface TableColumn {
+  id: string;
+  name: string;
+  token: Token;
+  normalizedX: number;
+  normalizedWidth: number;
+}
+
+export interface TableColumnDrag {
+  columnId: string;
+  startX: number;
+  initialWidth: number;
+}

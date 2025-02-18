@@ -7,13 +7,11 @@ import { DocumentViewer } from "../components/documentSchema/DocumentViewer";
 import { NavigationFooter } from "../components/documentSchema/NavigationFooter";
 import { RightSidebar } from "../components/documentSchema/RightSidebar";
 import { LeftSidebar } from "../components/documentSchema/LeftSidebar";
-import { Token } from "../components/documentSchema/types";
-
-interface TableColumn {
-  id: string;
-  name: string;
-  token: Token;
-}
+import {
+  Rectangle,
+  Token,
+  TableColumn,
+} from "../components/documentSchema/types";
 
 const DocumentSchema = () => {
   const [isSelectingToken, setIsSelectingToken] = useState(false);
@@ -24,6 +22,9 @@ const DocumentSchema = () => {
   const [endOfTableToken, setEndOfTableToken] = useState<Token | null>(null);
   const [tableColumns, setTableColumns] = useState<TableColumn[]>([]);
   const [isEditingTableHeader, setIsEditingTableHeader] = useState(false);
+  const [tableHeaderRect, setTableHeaderRect] = useState<Rectangle | null>(
+    null
+  );
 
   const {
     numPages,
@@ -38,28 +39,6 @@ const DocumentSchema = () => {
     tokens,
     containerRef,
   } = useDocumentState();
-
-  const {
-    rectangles,
-    setRectangles,
-    isDrawing,
-    currentRect,
-    selectedRect,
-    setSelectedRect,
-    cursorMode,
-    cursorPosition,
-    stageRef,
-    isHoveringRect,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    handleRectChange,
-    deleteRectangle,
-  } = useRectangleState({
-    currentPage,
-    tokens,
-    scale,
-  });
 
   // Reset token selection when changing pages
   React.useEffect(() => {
@@ -84,15 +63,75 @@ const DocumentSchema = () => {
       );
     });
 
-    const newColumns = tokensInRect.map((token) => ({
-      id: token.id,
-      name: token.text,
-      token,
-    }));
+    // Sort tokens by their x position to maintain left-to-right order
+    const sortedTokens = tokensInRect.sort(
+      (a, b) => a.bounding_box.x - b.bounding_box.x
+    );
 
-    setTableColumns(newColumns);
-    setIsEditingTableHeader(false);
+    // Calculate relative positions for each token within the header rect
+    const newColumns = sortedTokens.map((token, index) => {
+      const columnWidth = 1 / sortedTokens.length; // Divide header width equally
+      return {
+        id: token.id,
+        name: token.text,
+        token,
+        normalizedX: index * columnWidth,
+        normalizedWidth: columnWidth,
+      };
+    });
+
+    // Only update if we found tokens
+    if (newColumns.length > 0) {
+      setTableColumns(newColumns);
+      setTableHeaderRect(rect);
+      setIsEditingTableHeader(false);
+    }
   };
+
+  const {
+    rectangles,
+    setRectangles,
+    isDrawing,
+    setIsDrawing,
+    currentRect,
+    setCurrentRect,
+    selectedRect,
+    setSelectedRect,
+    cursorMode,
+    cursorPosition,
+    stageRef,
+    isHoveringRect,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp: baseHandleMouseUp,
+    handleRectChange,
+    deleteRectangle,
+  } = useRectangleState({
+    currentPage,
+    tokens,
+    scale,
+  });
+
+  // Custom handleMouseUp that prevents adding rectangles when editing table header
+  const handleMouseUp = React.useCallback(() => {
+    if (isDrawing && currentRect) {
+      if (isEditingTableHeader) {
+        handleTableHeaderSelection(currentRect);
+        setIsDrawing(false);
+        setCurrentRect(null);
+      } else {
+        baseHandleMouseUp();
+      }
+    } else {
+      baseHandleMouseUp();
+    }
+  }, [
+    isDrawing,
+    currentRect,
+    isEditingTableHeader,
+    baseHandleMouseUp,
+    handleTableHeaderSelection,
+  ]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -153,6 +192,9 @@ const DocumentSchema = () => {
             }}
             onRectangleComplete={handleTableHeaderSelection}
             isEditingTableHeader={isEditingTableHeader}
+            tableHeaderRect={tableHeaderRect}
+            tableColumns={tableColumns}
+            setTableColumns={setTableColumns}
           />
           <NavigationFooter
             currentPage={currentPage}
@@ -186,6 +228,8 @@ const DocumentSchema = () => {
           setTableColumns={setTableColumns}
           isEditingTableHeader={isEditingTableHeader}
           setIsEditingTableHeader={setIsEditingTableHeader}
+          tableHeaderRect={tableHeaderRect}
+          setTableHeaderRect={setTableHeaderRect}
         />
       </div>
     </div>

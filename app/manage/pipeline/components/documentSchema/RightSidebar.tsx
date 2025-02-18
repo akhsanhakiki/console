@@ -8,7 +8,7 @@ import {
   Input,
 } from "@heroui/react";
 import React, { useState } from "react";
-import { FiArrowRight, FiTrash2, FiX, FiEdit2 } from "react-icons/fi";
+import { FiArrowRight, FiTrash2, FiX, FiEdit2, FiPlus } from "react-icons/fi";
 import { Rectangle, Token } from "./types";
 import DocSample from "@/public/sample/Ezdocs OCR Pages.json";
 
@@ -16,6 +16,8 @@ interface TableColumn {
   id: string;
   name: string;
   token: Token;
+  normalizedX: number;
+  normalizedWidth: number;
 }
 
 interface RightSidebarProps {
@@ -41,6 +43,8 @@ interface RightSidebarProps {
   setTableColumns: (columns: TableColumn[]) => void;
   isEditingTableHeader: boolean;
   setIsEditingTableHeader: (editing: boolean) => void;
+  tableHeaderRect: Rectangle | null;
+  setTableHeaderRect: (rect: Rectangle | null) => void;
 }
 
 export const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -66,11 +70,52 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   setTableColumns,
   isEditingTableHeader,
   setIsEditingTableHeader,
+  tableHeaderRect,
+  setTableHeaderRect,
 }) => {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [newColumnName, setNewColumnName] = useState("");
+
+  const handleAddColumn = () => {
+    if (!newColumnName.trim() || !tableHeaderRect) return;
+
+    const newColumn: TableColumn = {
+      id: crypto.randomUUID(),
+      name: newColumnName.trim(),
+      token: {
+        id: crypto.randomUUID(),
+        text: "",
+        bounding_box: { x: 0, y: 0, width: 0, height: 0 },
+        confidence: 0,
+      },
+      normalizedX: tableHeaderRect.normalizedX,
+      normalizedWidth: 0,
+    };
+
+    // Calculate positions and widths for all columns
+    const numColumns = tableColumns.length + 1;
+    const columnWidth = tableHeaderRect.normalizedWidth / numColumns; // Divide header width equally
+
+    const updatedColumns = [
+      ...tableColumns.map((col, index) => ({
+        ...col,
+        normalizedX: tableHeaderRect.normalizedX + index * columnWidth,
+        normalizedWidth: columnWidth,
+      })),
+      {
+        ...newColumn,
+        normalizedX:
+          tableHeaderRect.normalizedX + (numColumns - 1) * columnWidth,
+        normalizedWidth: columnWidth,
+      },
+    ];
+
+    setTableColumns(updatedColumns);
+    setNewColumnName("");
+  };
 
   return (
-    <div className="w-2/12 border-1">
+    <div className="flex flex-col w-2/12 border-1 overflow-scroll">
       {/* Document Info */}
       <div className="p-4 border-b">
         <div className="flex flex-col gap-3">
@@ -146,7 +191,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* Table annotations */}
-      <div className="p-4 border-b">
+      <div className="p-4 ">
         <div className="flex flex-col gap-3">
           <div className="flex flex-row items-center justify-start gap-2">
             <Checkbox
@@ -265,128 +310,132 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                   <Button
                     size="sm"
                     variant="light"
-                    onPress={() =>
-                      setIsEditingTableHeader(!isEditingTableHeader)
-                    }
+                    onPress={() => {
+                      if (tableColumns.length > 0) {
+                        // Clear table columns and rectangle when re-selecting
+                        setTableColumns([]);
+                        setTableHeaderRect(null);
+                      }
+                      setIsEditingTableHeader(!isEditingTableHeader);
+                    }}
                   >
-                    {isEditingTableHeader ? "Cancel" : "Draw"}
+                    {tableColumns.length > 0
+                      ? "Re-select"
+                      : isEditingTableHeader
+                        ? "Cancel"
+                        : "Draw"}
                   </Button>
                 </div>
-                <div className="flex flex-col gap-2 mt-2">
-                  {tableColumns.map((column) => (
-                    <div
-                      key={column.id}
-                      className="flex items-center gap-2 bg-foreground-100 p-2 rounded-md"
-                    >
-                      {editingColumnId === column.id ? (
-                        <Input
-                          size="sm"
-                          placeholder="Column name"
-                          value={column.name}
-                          onChange={(e) => {
-                            const newColumns = tableColumns.map((c) =>
-                              c.id === column.id
-                                ? { ...c, name: e.target.value }
-                                : c
-                            );
-                            setTableColumns(newColumns);
-                          }}
-                          onBlur={() => setEditingColumnId(null)}
-                          autoFocus
-                        />
-                      ) : (
-                        <>
-                          <span className="text-sm font-poppins truncate flex-1">
-                            {column.name}
-                          </span>
-                          <Button
+                <ScrollShadow className="flex flex-col h-[calc(100vh-690px)]">
+                  <div className="flex flex-col gap-2 mt-2">
+                    {tableColumns.map((column) => (
+                      <div
+                        key={column.id}
+                        className="flex flex-col gap-1 bg-foreground-100 p-2 rounded-md"
+                      >
+                        {editingColumnId === column.id ? (
+                          <Input
                             size="sm"
-                            variant="light"
-                            isIconOnly
-                            onPress={() => setEditingColumnId(column.id)}
-                          >
-                            <FiEdit2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                            placeholder="Column name"
+                            value={column.name}
+                            onChange={(e) => {
+                              const newColumns = tableColumns.map((c) =>
+                                c.id === column.id
+                                  ? { ...c, name: e.target.value }
+                                  : c
+                              );
+                              setTableColumns(newColumns);
+                            }}
+                            onBlur={() => setEditingColumnId(null)}
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-poppins truncate flex-1">
+                              {column.name}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="light"
+                              isIconOnly
+                              onPress={() => setEditingColumnId(column.id)}
+                            >
+                              <FiEdit2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
+                          {tableHeaderRect && (
+                            <>
+                              <div className="flex justify-between">
+                                <span>X:</span>
+                                <span>
+                                  {(
+                                    tableHeaderRect.normalizedX +
+                                    column.normalizedX *
+                                      tableHeaderRect.normalizedWidth
+                                  ).toFixed(6)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Width:</span>
+                                <span>
+                                  {(
+                                    column.normalizedWidth *
+                                    tableHeaderRect.normalizedWidth
+                                  ).toFixed(6)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Y:</span>
+                                <span>
+                                  {tableHeaderRect.normalizedY.toFixed(6)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Height:</span>
+                                <span>
+                                  {tableHeaderRect.normalizedHeight.toFixed(6)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollShadow>
               </div>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Rectangles List */}
-      <div className="flex flex-col flex-1 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground-500 font-poppins">
-            Rectangles
-          </span>
-          <Button
-            variant="light"
-            className="font-poppins"
-            size="sm"
-            onPress={() => setRectangles([])}
-          >
-            Clear all
-          </Button>
-        </div>
-        <ScrollShadow className="flex-1">
-          <div className="flex flex-col gap-2 overflow-hidden">
-            {rectangles
-              .filter((rect) => rect.pageNumber === currentPage)
-              .map((rect) => (
-                <div
-                  key={rect.id}
-                  className={`flex flex-col gap-2 p-2 rounded cursor-pointer ${
-                    selectedRect?.id === rect.id
-                      ? "bg-primary/10"
-                      : "hover:bg-foreground-100"
-                  }`}
-                  onClick={() => setSelectedRect(rect)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-mono">
-                      (
-                      {rect.normalizedX >= 0 && rect.normalizedX <= 1
-                        ? rect.normalizedX.toFixed(6)
-                        : "-"}
-                      ,{" "}
-                      {rect.normalizedY >= 0 && rect.normalizedY <= 1
-                        ? rect.normalizedY.toFixed(6)
-                        : "-"}
-                      )
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="flat"
-                      isIconOnly
-                      onPress={() => deleteRectangle(rect.id)}
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  {rect.tokens && rect.tokens.length > 0 && (
-                    <div className="text-xs text-foreground-600 bg-foreground-50 p-2 rounded">
-                      {rect.tokens.map((token, idx) => (
-                        <div
-                          key={idx}
-                          className="flex justify-between items-center"
-                        >
-                          <span>{token.text}</span>
-                          <span className="text-foreground-400">
-                            {Math.round(token.confidence * 100)}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs text-foreground-500 font-poppins w-full">
+              Table columns
+            </span>
+            <div className="flex flex-row gap-2 w-full">
+              <Input
+                size="sm"
+                placeholder="Column name"
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddColumn();
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="solid"
+                isIconOnly
+                isDisabled={!tableHeaderRect || !newColumnName.trim()}
+                onPress={handleAddColumn}
+              >
+                <FiPlus className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </ScrollShadow>
+        </div>
       </div>
     </div>
   );
