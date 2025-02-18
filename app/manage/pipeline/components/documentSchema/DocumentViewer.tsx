@@ -24,6 +24,11 @@ interface DocumentViewerProps {
   handleRectChange: (rect: Rectangle) => void;
   setSelectedRect: (rect: Rectangle | null) => void;
   isHoveringRect?: (isHovering: boolean) => void;
+  isSelectingToken: boolean;
+  selectedToken: Token | null;
+  setSelectedToken: (token: Token | null) => void;
+  onRectangleComplete?: (rect: Rectangle) => void;
+  isEditingTableHeader: boolean;
 }
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
@@ -46,14 +51,45 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   handleRectChange,
   setSelectedRect,
   isHoveringRect,
+  isSelectingToken,
+  selectedToken,
+  setSelectedToken,
+  onRectangleComplete,
+  isEditingTableHeader,
 }) => {
+  const [hoveredToken, setHoveredToken] = React.useState<Token | null>(null);
+
+  const handleRectComplete = () => {
+    if (currentRect && onRectangleComplete && isEditingTableHeader) {
+      onRectangleComplete(currentRect);
+    }
+  };
+
+  React.useEffect(() => {
+    if (!isDrawing && currentRect) {
+      handleRectComplete();
+    }
+  }, [isDrawing, currentRect]);
+
   return (
     <div
       ref={stageRef}
       className="relative flex-1 select-none bg-foreground-100"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseDown={
+        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+          ? handleMouseDown
+          : undefined
+      }
+      onMouseMove={
+        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+          ? handleMouseMove
+          : undefined
+      }
+      onMouseUp={
+        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+          ? handleMouseUp
+          : undefined
+      }
       onMouseLeave={() => {
         if (isDrawing) {
           handleMouseUp();
@@ -120,6 +156,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                     const width = originalWidth * scale;
                     const height = originalHeight * scale;
 
+                    const isHovered = hoveredToken?.id === token.id;
+                    const isSelected = selectedToken?.id === token.id;
+
                     return (
                       <Rect
                         key={token.id}
@@ -127,9 +166,50 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         y={y}
                         width={width}
                         height={height}
-                        stroke="#0066FF80"
-                        strokeWidth={1.5}
-                        fill="transparent"
+                        stroke={
+                          isSelectingToken
+                            ? isSelected
+                              ? "#0066FF"
+                              : isHovered
+                                ? "#0066FFB0"
+                                : "#0066FF40"
+                            : "#0066FF80"
+                        }
+                        strokeWidth={isSelected || isHovered ? 2 : 1.5}
+                        fill={
+                          isSelectingToken
+                            ? isSelected
+                              ? "rgba(0, 102, 255, 0.1)"
+                              : isHovered
+                                ? "rgba(0, 102, 255, 0.05)"
+                                : "transparent"
+                            : "transparent"
+                        }
+                        onMouseEnter={() => {
+                          if (isSelectingToken) {
+                            setHoveredToken(token);
+                            const stage =
+                              stageRef.current?.querySelector("canvas");
+                            if (stage) {
+                              stage.style.cursor = "pointer";
+                            }
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (isSelectingToken) {
+                            setHoveredToken(null);
+                            const stage =
+                              stageRef.current?.querySelector("canvas");
+                            if (stage) {
+                              stage.style.cursor = "default";
+                            }
+                          }
+                        }}
+                        onClick={() => {
+                          if (isSelectingToken) {
+                            setSelectedToken(token);
+                          }
+                        }}
                       />
                     );
                   })}

@@ -1,8 +1,22 @@
-import { Button, Divider, ScrollShadow, Snippet } from "@heroui/react";
-import React from "react";
-import { FiTrash2 } from "react-icons/fi";
-import { Rectangle } from "./types";
+import {
+  Button,
+  Checkbox,
+  Divider,
+  ScrollShadow,
+  Select,
+  SelectItem,
+  Input,
+} from "@heroui/react";
+import React, { useState } from "react";
+import { FiArrowRight, FiTrash2, FiX, FiEdit2 } from "react-icons/fi";
+import { Rectangle, Token } from "./types";
 import DocSample from "@/public/sample/Ezdocs OCR Pages.json";
+
+interface TableColumn {
+  id: string;
+  name: string;
+  token: Token;
+}
 
 interface RightSidebarProps {
   currentPage: number;
@@ -14,6 +28,19 @@ interface RightSidebarProps {
   deleteRectangle: (id: string) => void;
   cursorPosition: { x: number; y: number };
   setRectangles: (rectangles: Rectangle[]) => void;
+  tokens: Token[];
+  isSelectingToken: boolean;
+  setIsSelectingToken: (isSelecting: boolean) => void;
+  isTableEnabled: boolean;
+  setIsTableEnabled: (enabled: boolean) => void;
+  startOfTableToken: Token | null;
+  setStartOfTableToken: (token: Token | null) => void;
+  endOfTableToken: Token | null;
+  setEndOfTableToken: (token: Token | null) => void;
+  tableColumns: TableColumn[];
+  setTableColumns: (columns: TableColumn[]) => void;
+  isEditingTableHeader: boolean;
+  setIsEditingTableHeader: (editing: boolean) => void;
 }
 
 export const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -26,13 +53,28 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   deleteRectangle,
   cursorPosition,
   setRectangles,
+  tokens,
+  isSelectingToken,
+  setIsSelectingToken,
+  isTableEnabled,
+  setIsTableEnabled,
+  startOfTableToken,
+  setStartOfTableToken,
+  endOfTableToken,
+  setEndOfTableToken,
+  tableColumns,
+  setTableColumns,
+  isEditingTableHeader,
+  setIsEditingTableHeader,
 }) => {
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+
   return (
     <div className="w-2/12 border-1">
       {/* Document Info */}
       <div className="p-4 border-b">
         <div className="flex flex-col gap-3">
-          <span className="text-xs font-medium text-foreground-500 font-poppins">
+          <span className="text-sm font-medium text-foreground-600 font-poppins">
             Document Info
           </span>
           {/* Document name */}
@@ -73,7 +115,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 Cursor position
               </span>
               <div className="flex flex-row gap-2 w-full">
-                <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded gap-1 w-1/2">
+                <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-1/2">
                   <span>X:</span>
                   {(() => {
                     const normalizedX =
@@ -85,7 +127,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                       : "-";
                   })()}
                 </div>
-                <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded gap-1 w-1/2">
+                <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-1/2">
                   <span>Y:</span>
                   {(() => {
                     const normalizedY =
@@ -100,6 +142,179 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Table annotations */}
+      <div className="p-4 border-b">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-row items-center justify-start gap-2">
+            <Checkbox
+              size="sm"
+              isSelected={isTableEnabled}
+              onValueChange={setIsTableEnabled}
+            />
+            <span className="text-sm font-medium text-foreground-600 font-poppins">
+              Table
+            </span>
+          </div>
+
+          {isTableEnabled && (
+            <>
+              <div className="flex flex-col w-full gap-1">
+                <span className="text-xs text-foreground-500 font-poppins w-full">
+                  Start of table
+                </span>
+                <div className="flex flex-row gap-2 w-full">
+                  <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-full items-center justify-between">
+                    {startOfTableToken ? (
+                      <>
+                        <div className="text-sm font-poppins truncate">
+                          {startOfTableToken.text}
+                        </div>
+                        <span
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setStartOfTableToken(null);
+                            setIsSelectingToken(false);
+                          }}
+                        >
+                          <FiX className="w-4 h-4" />
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-foreground-400">
+                        select a token
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    className={
+                      isSelectingToken && !startOfTableToken
+                        ? "bg-primary"
+                        : "bg-foreground-200"
+                    }
+                    size="sm"
+                    variant="solid"
+                    isIconOnly
+                    isDisabled={!!endOfTableToken}
+                    onPress={() => {
+                      if (!startOfTableToken) {
+                        setIsSelectingToken(true);
+                      }
+                    }}
+                  >
+                    <FiArrowRight />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full gap-1">
+                <span className="text-xs text-foreground-500 font-poppins w-full">
+                  End of table
+                </span>
+                <div className="flex flex-row gap-2 w-full">
+                  <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-full items-center justify-between">
+                    {endOfTableToken ? (
+                      <>
+                        <div className="text-sm font-poppins truncate">
+                          {endOfTableToken.text}
+                        </div>
+                        <span
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setEndOfTableToken(null);
+                            setIsSelectingToken(false);
+                          }}
+                        >
+                          <FiX className="w-4 h-4" />
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-foreground-400">
+                        select a token
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    className={
+                      isSelectingToken && !endOfTableToken
+                        ? "bg-primary"
+                        : "bg-foreground-200"
+                    }
+                    size="sm"
+                    variant="solid"
+                    isIconOnly
+                    isDisabled={!startOfTableToken || !!endOfTableToken}
+                    onPress={() => {
+                      if (!endOfTableToken && startOfTableToken) {
+                        setIsSelectingToken(true);
+                      }
+                    }}
+                  >
+                    <FiArrowRight />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full gap-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-foreground-500 font-poppins w-full">
+                    Table header
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="light"
+                    onPress={() =>
+                      setIsEditingTableHeader(!isEditingTableHeader)
+                    }
+                  >
+                    {isEditingTableHeader ? "Cancel" : "Draw"}
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-2 mt-2">
+                  {tableColumns.map((column) => (
+                    <div
+                      key={column.id}
+                      className="flex items-center gap-2 bg-foreground-100 p-2 rounded-md"
+                    >
+                      {editingColumnId === column.id ? (
+                        <Input
+                          size="sm"
+                          placeholder="Column name"
+                          value={column.name}
+                          onChange={(e) => {
+                            const newColumns = tableColumns.map((c) =>
+                              c.id === column.id
+                                ? { ...c, name: e.target.value }
+                                : c
+                            );
+                            setTableColumns(newColumns);
+                          }}
+                          onBlur={() => setEditingColumnId(null)}
+                          autoFocus
+                        />
+                      ) : (
+                        <>
+                          <span className="text-sm font-poppins truncate flex-1">
+                            {column.name}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="light"
+                            isIconOnly
+                            onPress={() => setEditingColumnId(column.id)}
+                          >
+                            <FiEdit2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
