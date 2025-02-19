@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Accordion, AccordionItem } from "@heroui/react";
+import { Accordion, AccordionItem, Divider } from "@heroui/react";
 import { FiPlus, FiMinus } from "react-icons/fi";
 import { IoMailOutline } from "react-icons/io5";
 import { LuPhone } from "react-icons/lu";
@@ -65,35 +65,6 @@ const HelpAndSupport = () => {
         Help and Support
       </h1>
       <div className="flex flex-row gap-6 h-full">
-        <div className="flex flex-col gap-2 w-4/6">
-          <h1 className="text-lg font-semibold font-poppins text-foreground-900">
-            Top 10 FAQ
-          </h1>
-          <div className="flex flex-col gap-2 overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll">
-            {faq.map((item) => (
-              <Accordion key={item.question}>
-                <AccordionItem
-                  key={item.question}
-                  aria-label={item.question}
-                  indicator={({ isOpen }) =>
-                    isOpen ? <FiMinus className="rotate-90" /> : <FiPlus />
-                  }
-                  title={
-                    <span className="font-medium font-poppins text-sm">
-                      {item.question}
-                    </span>
-                  }
-                  className="-my-1 border-b-1 border-foreground-200"
-                >
-                  <p className="font-normal font-poppins -mt-4 text-sm">
-                    {item.answer}
-                  </p>
-                </AccordionItem>
-              </Accordion>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col border-r-1 border-foreground-200"></div>
         <div className="flex flex-col gap-4 w-2/6">
           <h1 className="text-lg font-semibold font-poppins text-foreground-900">
             Get in touch with us
@@ -151,6 +122,35 @@ const HelpAndSupport = () => {
             <Button className="w-fit bg-gradient-to-r from-[#49FFDB] to-[#00E5FF] text-black font-poppins font-medium text-sm rounded-lg">
               Reach Out
             </Button>
+          </div>
+        </div>
+        <Divider orientation="vertical" />
+        <div className="flex flex-col gap-2 w-4/6">
+          <h1 className="text-lg font-semibold font-poppins text-foreground-900">
+            Top 10 FAQ
+          </h1>
+          <div className="flex flex-col gap-2 overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll">
+            {faq.map((item) => (
+              <Accordion key={item.question}>
+                <AccordionItem
+                  key={item.question}
+                  aria-label={item.question}
+                  indicator={({ isOpen }) =>
+                    isOpen ? <FiMinus className="rotate-90" /> : <FiPlus />
+                  }
+                  title={
+                    <span className="font-medium font-poppins text-sm">
+                      {item.question}
+                    </span>
+                  }
+                  className="-my-1 border-b-1 border-foreground-200"
+                >
+                  <p className="font-normal font-poppins -mt-4 text-sm">
+                    {item.answer}
+                  </p>
+                </AccordionItem>
+              </Accordion>
+            ))}
           </div>
         </div>
       </div>

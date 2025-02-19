@@ -263,7 +263,7 @@ const SideNavbar = () => {
       )}
     >
       {/* Sidebar toggle button */}
-      <div className="flex items-center justify-center px-3">
+      <div className="flex items-center justify-center px-3 pb-3">
         <div
           className={clsx("flex items-center w-full gap-2", {
             "justify-between": isExpanded,

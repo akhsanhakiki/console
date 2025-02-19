@@ -1,5 +1,6 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
+import { motion } from "framer-motion";
 import { Tooltip } from "@heroui/react";
 import { FiInfo } from "react-icons/fi";
 import ExtractedPageIcon from "@/public/images/icons/extractedPageIcon";
@@ -9,7 +10,6 @@ import AvgTimerperPageIcon from "@/public/images/icons/avgTimerperPageIcon";
 import { useOrganization } from "@clerk/nextjs";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useDashboardStore } from "@/stores/dashboardStore";
-import { useEffect } from "react";
 import ContentLoading from "./contentLoading";
 
 const DashboardContent = () => {
@@ -92,14 +92,41 @@ const DashboardContent = () => {
     },
   ];
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
+
   return (
-    <div className="flex flex-col gap-4 flex-grow">
+    <motion.div
+      className="flex flex-col gap-4 flex-grow"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Card Data */}
-      <div className="flex flex-row gap-4">
+      <motion.div className="flex flex-row gap-4" variants={containerVariants}>
         {cardData.map((card, index) => (
-          <div
+          <motion.div
             key={index}
             className="flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl p-4 w-1/4"
+            variants={itemVariants}
           >
             <div className="flex flex-row items-center justify-between">
               <h2 className="text-sm font-poppins font-medium text-foreground-500">
@@ -112,13 +139,19 @@ const DashboardContent = () => {
             <p className="text-xl font-poppins font-semibold text-foreground-900">
               {card.value}
             </p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Chart Data */}
-      <div className="flex flex-row gap-4 w-full">
-        <div className="flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl w-3/5 p-4">
+      <motion.div
+        className="flex flex-row gap-4 w-full"
+        variants={containerVariants}
+      >
+        <motion.div
+          className="flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl w-3/5 p-4"
+          variants={itemVariants}
+        >
           <div className="flex flex-row justify-between">
             <h2 className="text-sm font-poppins font-semibold text-foreground-900">
               Extracted Documents
@@ -130,8 +163,11 @@ const DashboardContent = () => {
           <div>
             <h2>Chart</h2>
           </div>
-        </div>
-        <div className="flex flex-col gap-4 w-2/5">
+        </motion.div>
+        <motion.div
+          className="flex flex-col gap-4 w-2/5"
+          variants={itemVariants}
+        >
           <div className="flex flex-row gap-4">
             {/* Total Page Extracted */}
             <div className="flex flex-col bg-gradient-to-br from-[#09FF8D] to-[#0CD9E7] rounded-2xl gap-4 p-4 w-1/2">
@@ -219,12 +255,18 @@ const DashboardContent = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Extraction Logs */}
-      <div className="flex flex-row gap-4 w-full h-full flex-grow">
-        <div className="flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl w-3/5 p-4">
+      <motion.div
+        className="flex flex-row gap-4 w-full h-full flex-grow"
+        variants={containerVariants}
+      >
+        <motion.div
+          className="flex flex-col gap-2 border-1 border-foreground-200 rounded-2xl w-3/5 p-4"
+          variants={itemVariants}
+        >
           <div className="flex flex-row justify-between">
             <h2 className="text-sm font-poppins font-semibold text-foreground-900">
               Extraction Log
@@ -233,8 +275,11 @@ const DashboardContent = () => {
               <FiInfo className="w-4 h-4 text-foreground-900 cursor-pointer" />
             </Tooltip>
           </div>
-        </div>
-        <div className="flex flex-col gap-2 w-2/5">
+        </motion.div>
+        <motion.div
+          className="flex flex-col gap-2 w-2/5"
+          variants={itemVariants}
+        >
           <div className="flex flex-col border-1 border-foreground-200 rounded-2xl gap-4 p-4 flex-grow">
             <div className="flex flex-row justify-between">
               <h2 className="text-sm font-poppins font-semibold text-foreground-900">
@@ -257,9 +302,9 @@ const DashboardContent = () => {
             </div>
             <div className="flex flex-row gap-4">Chart</div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 
