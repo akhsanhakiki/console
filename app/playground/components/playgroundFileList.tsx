@@ -28,6 +28,9 @@ import {
 import { IoSearch } from "react-icons/io5";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { usePlaygrounds } from "../hooks/usePlayground";
+import NewPlayground from "./playground";
+import { IoArrowBack } from "react-icons/io5";
+import ChevronDown from "@/public/images/icons/chevronDown";
 
 const columns = [
   { name: "NAME", uid: "name", sortable: true },
@@ -192,13 +195,7 @@ const INITIAL_VISIBLE_COLUMNS = [
 
 type PlaygroundFile = (typeof playgroundFiles)[0];
 
-const PlaygroundFileList = ({
-  setPlaygroundName,
-  setCurrentView,
-}: {
-  setPlaygroundName: (name: string) => void;
-  setCurrentView: (view: "list" | "new" | "playground") => void;
-}) => {
+const PlaygroundFileList = () => {
   const { getAllPlaygrounds, deletePlayground } = usePlaygrounds();
   const [filterValue, setFilterValue] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set([]));
@@ -213,6 +210,25 @@ const PlaygroundFileList = ({
   const [page, setPage] = useState(1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedPlayground, setSelectedPlayground] = useState<any>(null);
+
+  // New state from page.tsx
+  const [newPlayground, setNewPlayground] = useState("");
+  const [currentView, setCurrentView] = useState<"list" | "new" | "playground">(
+    "list"
+  );
+  const [playgroundName, setPlaygroundName] = useState("");
+
+  const handleBack = () => {
+    setNewPlayground("");
+    setCurrentView("list");
+    setPlaygroundName("");
+  };
+
+  const handleNewPlayground = (name: string) => {
+    setNewPlayground(name);
+    setCurrentView("new");
+    setPlaygroundName(name);
+  };
 
   const playgrounds = getAllPlaygrounds();
   const hasSearchFilter = Boolean(filterValue);
@@ -358,6 +374,32 @@ const PlaygroundFileList = ({
       </div>
     );
   }, [selectedKeys, filteredItems.length, page, pages]);
+
+  if (currentView !== "list") {
+    return (
+      <div className="w-full h-full flex flex-col gap-4">
+        <div className="flex flex-row gap-2 items-center">
+          <div className="cursor-pointer" onClick={handleBack}>
+            <h1 className="text-xl font-semibold font-poppins text-foreground-900">
+              Playground
+            </h1>
+          </div>
+          <ChevronDown className="-rotate-90" />
+          <h2 className="text-sm font-medium font-poppins text-foreground-900">
+            {playgroundName}
+          </h2>
+        </div>
+        <NewPlayground
+          onBack={handleBack}
+          onNext={() => {}}
+          pipelineType={newPlayground}
+          playgroundName={
+            currentView === "playground" ? playgroundName : undefined
+          }
+        />
+      </div>
+    );
+  }
 
   if (playgrounds.length === 0) {
     return (

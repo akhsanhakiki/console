@@ -20,17 +20,19 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   dashboardData: null,
   isLoading: false,
   error: null,
-  fetchDashboardData: async (orgId, workspaceId) => {
+  fetchDashboardData: (orgId, workspaceId) => {
     set({ isLoading: true, error: null });
-    try {
-      const response = await fetch(
-        `/api/dashboard?orgId=${orgId}&workspaceId=${workspaceId}`
-      );
-      if (!response.ok) throw new Error("Failed to fetch dashboard data");
-      const data = await response.json();
-      set({ dashboardData: data[0], isLoading: false });
-    } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
-    }
+    return fetch(`/api/dashboard?orgId=${orgId}&workspaceId=${workspaceId}`)
+      .then((response) => {
+        if (!response.ok) throw new Error("Failed to fetch dashboard data");
+        return response.json();
+      })
+      .then((data) => {
+        set({ dashboardData: data[0], isLoading: false });
+      })
+      .catch((error) => {
+        set({ error: error.message, isLoading: false });
+        throw error;
+      });
   },
 }));

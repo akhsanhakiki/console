@@ -5,16 +5,69 @@ import ChevronIcon from "@/public/images/icons/chevronDown";
 import PlaygroundModal from "./playgorundModal";
 import { useDisclosure } from "@heroui/react";
 import { usePlaygrounds } from "../hooks/usePlayground";
+import { useRouter } from "next/navigation";
+import ExtractFileIcon from "@/public/images/icons/extractFileIcon";
 
-interface PipelineListProps {
-  cards: {
-    title: string;
-    icon: React.ComponentType<{ className: string }>;
-    description: string;
-    state: "active" | "disabled";
-  }[];
-  setNewPlayground: (name: string) => void;
-}
+const pipelineCards = [
+  {
+    title: "Bank Statement",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from bank statements such as account number, balance, and other financial information.",
+    state: "active" as const,
+  },
+  {
+    title: "General Documents",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from general documents such as invoices, receipts, and other business documents.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Credit Card Application",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from credit card applications such as name, address, and other personal information.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Insurance Policy",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from insurance policies such as policy number, coverage, and other insurance details.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Loan Agreement",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from loan agreements such as loan amount, interest rate, and other loan details.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Mortgage Agreement",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from mortgage agreements such as property details, loan amount, and other mortgage details.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Property Deed",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from property deeds such as property details, ownership, and other property details.",
+    state: "disabled" as const,
+  },
+  {
+    title: "Vehicle Registration",
+    icon: ExtractFileIcon,
+    description:
+      "Extract information from vehicle registration documents such as vehicle details, ownership, and other vehicle details.",
+    state: "disabled" as const,
+  },
+];
+
+interface PipelineListProps {}
 
 interface PipelineData {
   name: string;
@@ -22,7 +75,7 @@ interface PipelineData {
   createdAt: string;
 }
 
-const PipelineList = ({ cards, setNewPlayground }: PipelineListProps) => {
+const PipelineList = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(true);
@@ -30,6 +83,7 @@ const PipelineList = ({ cards, setNewPlayground }: PipelineListProps) => {
   const [selectedDescription, setSelectedDescription] = useState("");
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { addPlayground } = usePlaygrounds();
+  const router = useRouter();
 
   const handleScroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
@@ -78,9 +132,18 @@ const PipelineList = ({ cards, setNewPlayground }: PipelineListProps) => {
   }) => {
     // Add new playground using the hook
     const newPlayground = addPlayground(data.name, data.type, data.description);
+    onClose();
+    // Navigate to the new playground
+    router.push(`/playground/new?type=${encodeURIComponent(data.type)}`);
+  };
 
-    // Update parent component
-    setNewPlayground(data.name);
+  const handleNewPlayground = (name: string) => {
+    // Instead of using router.push directly, open the modal first
+    setSelectedPipeline(name);
+    setSelectedDescription(
+      pipelineCards.find((card) => card.title === name)?.description || ""
+    );
+    onOpen();
   };
 
   useEffect(() => {
@@ -116,17 +179,15 @@ const PipelineList = ({ cards, setNewPlayground }: PipelineListProps) => {
             className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
           >
             <div className="flex flex-nowrap gap-4">
-              {cards.map((card, index) => (
+              {pipelineCards.map((card, index) => (
                 <div
                   key={index}
                   className="flex-none w-[320px] snap-start first:ml-0"
-                  onClick={() =>
-                    handlePipelineClick(
-                      card.title,
-                      card.description,
-                      card.state
-                    )
-                  }
+                  onClick={() => {
+                    if (card.state === "active") {
+                      handleNewPlayground(card.title);
+                    }
+                  }}
                 >
                   <PipelineCard
                     title={card.title}

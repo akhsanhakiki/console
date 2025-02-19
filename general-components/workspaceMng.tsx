@@ -199,6 +199,8 @@ const WorkspaceMng = () => {
         appearance={{
           elements: {
             rootBox: "flex",
+            organizationSwitcherTrigger:
+              "text-xs font-medium text-foreground-900 font-poppins",
           },
         }}
         afterCreateOrganizationUrl="/workspace"
@@ -215,10 +217,10 @@ const WorkspaceMng = () => {
               className="flex flex-row items-center gap-1 px-2 py-1 rounded-md hover:bg-foreground-100 cursor-pointer"
               onClick={() => setIsOpen(!isOpen)}
             >
-              <p className="text-xs font-medium text-foreground-500 font-poppins">
+              <p className="text-xs font-medium text-foreground-900 font-poppins">
                 {activeWorkspace?.name || "Select Workspace"}
               </p>
-              <HiChevronDown className="w-4 h-4 text-foreground-500 transition-transform duration-200" />
+              <HiChevronDown className="w-4 h-4 text-foreground-900 transition-transform duration-200" />
             </div>
             {isOpen && <WorkspacePanel />}
           </div>

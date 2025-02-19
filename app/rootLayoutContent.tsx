@@ -56,7 +56,7 @@ export default function RootLayoutContent({
         >
           <HeroUIClientProvider>
             <Providers
-              themeProps={{ attribute: "class", defaultTheme: "systemDefault" }}
+              themeProps={{ attribute: "class", defaultTheme: "light" }}
             >
               <div className="relative flex flex-col h-screen">
                 {!isAuthRoute && <HeaderBar />}
