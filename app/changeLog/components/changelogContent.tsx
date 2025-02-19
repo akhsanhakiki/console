@@ -234,9 +234,9 @@ const changelogContent = () => {
   return (
     <>
       <style>{styles}</style>
-      <div className="flex flex-row gap-8">
+      <div className="flex flex-row gap-6">
         <div className="flex flex-col gap-2 min-w-[240px] h-[calc(100vh-6rem)] overflow-scroll scrollbar-hide">
-          <h2 className="text-base font-medium font-poppins mb-4 text-foreground-500">
+          <h2 className="text-base font-medium font-poppins mb-2 text-foreground-500">
             Version History
           </h2>
           {changelogCards.map((releaseDate) => {
@@ -289,7 +289,7 @@ const changelogContent = () => {
         <Divider orientation="vertical" className="h-auto" />
 
         <div className="flex flex-col gap-4 flex-1 max-w-[800px] h-[calc(100vh-6rem)] overflow-scroll">
-          <h2 className="text-base font-medium font-poppins mb-4 text-foreground-500">
+          <h2 className="text-base font-medium font-poppins mb-2 text-foreground-500">
             Release Details
           </h2>
           {changelogCards

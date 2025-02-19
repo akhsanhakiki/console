@@ -21,11 +21,11 @@ const ChangelogCard = ({
       <h2 className="text-lg font-semibold font-poppins text-foreground-900">
         {title}
       </h2>
-      <p className="text-sm font-medium font-poppins text-foreground-500">
+      <p className="text-sm font-normal font-poppins text-foreground-500">
         {description}
       </p>
       {remarks && remarks.length > 0 && (
-        <ul className="list-disc list-inside text-sm font-medium font-poppins text-foreground-500 pl-2">
+        <ul className="list-disc list-inside text-sm font-normal font-poppins text-foreground-500 pl-2">
           {remarks.map((remark, index) => (
             <li key={index}>{remark}</li>
           ))}
