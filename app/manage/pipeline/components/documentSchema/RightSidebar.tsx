@@ -193,7 +193,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       {/* Table annotations */}
       <div className="p-4 ">
         <div className="flex flex-col gap-3">
-          <div className="flex flex-row items-center justify-start gap-2">
+          <div className="flex flex-row items-center justify-start">
             <Checkbox
               size="sm"
               isSelected={isTableEnabled}
@@ -408,33 +408,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               </div>
             </>
           )}
-          <div className="flex flex-col gap-2">
-            <span className="text-xs text-foreground-500 font-poppins w-full">
-              Table columns
-            </span>
-            <div className="flex flex-row gap-2 w-full">
-              <Input
-                size="sm"
-                placeholder="Column name"
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleAddColumn();
-                  }
-                }}
-              />
-              <Button
-                size="sm"
-                variant="solid"
-                isIconOnly
-                isDisabled={!tableHeaderRect || !newColumnName.trim()}
-                onPress={handleAddColumn}
-              >
-                <FiPlus className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

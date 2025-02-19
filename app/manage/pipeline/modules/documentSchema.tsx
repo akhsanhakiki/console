@@ -6,7 +6,7 @@ import { useRectangleState } from "../components/documentSchema/hooks/useRectang
 import { DocumentViewer } from "../components/documentSchema/DocumentViewer";
 import { NavigationFooter } from "../components/documentSchema/NavigationFooter";
 import { RightSidebar } from "../components/documentSchema/RightSidebar";
-import { LeftSidebar } from "../components/documentSchema/LeftSidebar";
+
 import {
   Rectangle,
   Token,
@@ -150,15 +150,7 @@ const DocumentSchema = () => {
 
       {/* Image Viewer and Editor Section */}
       <div className="flex flex-row h-[calc(100vh-240px)]">
-        <LeftSidebar
-          rectangles={rectangles}
-          currentPage={currentPage}
-          numPages={numPages}
-          selectedRect={selectedRect}
-          setSelectedRect={setSelectedRect}
-        />
-
-        <div className="flex flex-col w-8/12">
+        <div className="flex flex-col w-full">
           <DocumentViewer
             pageImage={pageImage}
             stageSize={stageSize}
