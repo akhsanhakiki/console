@@ -290,7 +290,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             <Button
               size="sm"
               variant="solid"
-              className="bg-foreground-200"
+              className="bg-foreground-100 text-foreground-900 font-poppins"
               onPress={() => setIsAddingField(true)}
               isDisabled={!!drawingForFieldId}
             >
