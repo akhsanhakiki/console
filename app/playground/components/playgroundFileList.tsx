@@ -24,6 +24,8 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/react";
+import { motion } from "framer-motion";
+import { HTMLMotionProps } from "framer-motion";
 
 import { IoSearch } from "react-icons/io5";
 import { HiOutlineDotsVertical } from "react-icons/hi";
@@ -375,10 +377,57 @@ const PlaygroundFileList = () => {
     );
   }, [selectedKeys, filteredItems.length, page, pages]);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 1,
+      },
+    },
+  };
+
+  const tableRowVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 1,
+      },
+    },
+  };
+
   if (currentView !== "list") {
     return (
-      <div className="w-full h-full flex flex-col gap-4">
-        <div className="flex flex-row gap-2 items-center">
+      <motion.div
+        className="w-full h-full flex flex-col gap-4"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <motion.div
+          className="flex flex-row gap-2 items-center"
+          variants={itemVariants}
+        >
           <div className="cursor-pointer" onClick={handleBack}>
             <h1 className="text-xl font-semibold font-poppins text-foreground-900">
               Playground
@@ -388,7 +437,7 @@ const PlaygroundFileList = () => {
           <h2 className="text-sm font-medium font-poppins text-foreground-900">
             {playgroundName}
           </h2>
-        </div>
+        </motion.div>
         <NewPlayground
           onBack={handleBack}
           onNext={() => {}}
@@ -397,38 +446,65 @@ const PlaygroundFileList = () => {
             currentView === "playground" ? playgroundName : undefined
           }
         />
-      </div>
+      </motion.div>
     );
   }
 
   if (playgrounds.length === 0) {
     return (
-      <div className="flex flex-col gap-2 h-full">
-        <h2 className="text-base font-semibold font-poppins text-foreground-700">
+      <motion.div
+        className="flex flex-col gap-2 h-full"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <motion.h2
+          className="text-base font-semibold font-poppins text-foreground-700"
+          variants={itemVariants}
+        >
           Recent Playgrounds
-        </h2>
-        <div className="flex flex-col gap-4 justify-center items-center h-full">
-          <LuFileX2 className="text-foreground-500 w-32 h-32 p-8 rounded-3xl" />
-          <div className="flex flex-col gap-2 justify-center items-center">
+        </motion.h2>
+        <motion.div
+          className="flex flex-col gap-4 justify-center items-center h-full"
+          variants={itemVariants}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          >
+            <LuFileX2 className="text-foreground-500 w-32 h-32 p-8 rounded-3xl" />
+          </motion.div>
+          <motion.div
+            className="flex flex-col gap-2 justify-center items-center"
+            variants={itemVariants}
+          >
             <p className="text-foreground-800 font-poppins font-medium text-sm">
               No playgrounds found
             </p>
             <p className="text-foreground-500 font-poppins font-normal text-sm">
               Create a new playground to get started
             </p>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <motion.div
+      className="w-full h-full flex flex-col"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       {/* Top Content - Fixed Height */}
-      <div className="flex-none mb-4">{topContent}</div>
+      <motion.div className="flex-none mb-4" variants={itemVariants}>
+        {topContent}
+      </motion.div>
 
       {/* Table Container - Flexible Height */}
-      <div className="flex-1 min-h-0">
+      <motion.div className="flex-1 min-h-0" variants={itemVariants}>
         <Table
           isCompact
           removeWrapper
@@ -478,47 +554,69 @@ const PlaygroundFileList = () => {
                 }}
               >
                 {(columnKey) => (
-                  <TableCell>{renderCell(item, columnKey)}</TableCell>
+                  <TableCell>
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 15,
+                        mass: 1,
+                        delay: items.indexOf(item) * 0.1,
+                      }}
+                    >
+                      {renderCell(item, columnKey)}
+                    </motion.div>
+                  </TableCell>
                 )}
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </div>
+      </motion.div>
 
       {/* Bottom Content - Fixed Height */}
-      <div className="flex-none mt-4">{bottomContent}</div>
+      <motion.div className="flex-none mt-4" variants={itemVariants}>
+        {bottomContent}
+      </motion.div>
 
       {/* Delete Confirmation Modal */}
       <Modal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)}>
         <ModalContent>
-          <ModalHeader className="font-poppins">Confirm Delete</ModalHeader>
-          <ModalBody>
-            <p className="text-foreground-700 font-poppins text-sm">
-              Are you sure you want to delete the playground "
-              <span className="font-medium">{selectedPlayground?.name}</span>"?
-              This action cannot be undone.
-            </p>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              variant="bordered"
-              onPress={() => setDeleteModalOpen(false)}
-              className="font-poppins"
-            >
-              Cancel
-            </Button>
-            <Button
-              color="danger"
-              onPress={confirmDelete}
-              className="font-poppins"
-            >
-              Delete
-            </Button>
-          </ModalFooter>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ModalHeader className="font-poppins">Confirm Delete</ModalHeader>
+            <ModalBody>
+              <p className="text-foreground-700 font-poppins text-sm">
+                Are you sure you want to delete the playground "
+                <span className="font-medium">{selectedPlayground?.name}</span>
+                "? This action cannot be undone.
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                variant="bordered"
+                onPress={() => setDeleteModalOpen(false)}
+                className="font-poppins"
+              >
+                Cancel
+              </Button>
+              <Button
+                color="danger"
+                onPress={confirmDelete}
+                className="font-poppins"
+              >
+                Delete
+              </Button>
+            </ModalFooter>
+          </motion.div>
         </ModalContent>
       </Modal>
-    </div>
+    </motion.div>
   );
 };
 

@@ -32,7 +32,7 @@ const moduleComponents = {
     loading: LoadingComponent,
     ssr: false,
   }),
-  "/manage/datatype": dynamic(() => import("./manage/datatype/page"), {
+  "/manage/doctype": dynamic(() => import("./manage/doctype/page"), {
     loading: LoadingComponent,
     ssr: false,
   }),

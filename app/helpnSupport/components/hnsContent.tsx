@@ -7,6 +7,7 @@ import { FiMinus } from "react-icons/fi";
 import { LuClock4 } from "react-icons/lu";
 import { LuPhone } from "react-icons/lu";
 import { IoMailOutline } from "react-icons/io5";
+import { motion } from "framer-motion";
 
 const faq = [
   {
@@ -62,21 +63,80 @@ const faq = [
 ];
 
 const hnsContent = () => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  const contactCardVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 1,
+      },
+    },
+  };
+
   return (
-    <div className="flex flex-row gap-6 h-full">
-      <div className="flex flex-col gap-4 w-1/4">
-        <h1 className="text-base font-medium font-poppins text-foreground-500">
+    <motion.div
+      className="flex flex-row gap-6 h-full"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <motion.div className="flex flex-col gap-4 w-1/4" variants={itemVariants}>
+        <motion.h1
+          className="text-base font-medium font-poppins text-foreground-500"
+          variants={itemVariants}
+        >
           Get in touch with us
-        </h1>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center">
+        </motion.h1>
+        <motion.div
+          className="flex flex-col gap-3"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.15,
+                delayChildren: 0.1,
+              },
+            },
+          }}
+        >
+          <motion.div
+            className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center hover:cursor-pointer hover:scale-103 transition-all duration-300 hover:shadow-md"
+            onClick={() => {
+              window.open("mailto:hello@ezdocs.ai", "_blank");
+            }}
+            variants={contactCardVariants}
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+          >
             <IoMailOutline className="text-foreground-900 p-2 rounded-lg bg-foreground-100 w-8 h-8" />
-            <div
-              className="flex flex-col"
-              onClick={() => {
-                window.open("mailto:hello@ezdocs.ai", "_blank");
-              }}
-            >
+            <div className="flex flex-col">
               <h1 className="text-sm font-semibold font-poppins text-foreground-900">
                 Email
               </h1>
@@ -84,15 +144,17 @@ const hnsContent = () => {
                 hello@ezdocs.ai
               </p>
             </div>
-          </div>
-          <div className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center">
+          </motion.div>
+          <motion.div
+            className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center hover:cursor-pointer hover:scale-103 transition-all duration-300 hover:shadow-md"
+            onClick={() => {
+              window.open("tel:+6588916709", "_blank");
+            }}
+            variants={contactCardVariants}
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+          >
             <LuPhone className="text-foreground-900 p-2 rounded-lg bg-foreground-100 w-8 h-8" />
-            <div
-              className="flex flex-col"
-              onClick={() => {
-                window.open("tel:+6588916709", "_blank");
-              }}
-            >
+            <div className="flex flex-col">
               <h1 className="text-sm font-semibold font-poppins text-foreground-900">
                 Contact
               </h1>
@@ -100,8 +162,12 @@ const hnsContent = () => {
                 +65 8891 6709
               </p>
             </div>
-          </div>
-          <div className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center">
+          </motion.div>
+          <motion.div
+            className="flex flex-row gap-4 border-1 border-foreground-200 rounded-xl px-4 py-2 items-center hover:cursor-pointer hover:scale-103 transition-all duration-300 hover:shadow-md"
+            variants={contactCardVariants}
+            whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
+          >
             <LuClock4 className="text-foreground-900 p-2 rounded-lg bg-foreground-100 w-8 h-8" />
             <div className="flex flex-col">
               <h1 className="text-sm font-semibold font-poppins text-foreground-900">
@@ -111,48 +177,65 @@ const hnsContent = () => {
                 Mon - Fri: 9:00 AM - 5:00 PM
               </p>
             </div>
-          </div>
-        </div>
-        <p className="text-sm font-normal font-poppins text-foreground-900">
+          </motion.div>
+        </motion.div>
+        <motion.p
+          className="text-sm font-normal font-poppins text-foreground-900"
+          variants={itemVariants}
+        >
           <span className="font-semibold">Need help?</span> Contact us via chat,
           email, or phone—we're here to assist you!
-        </p>
-        <div className="flex flex-row gap-2 justify-end pr-4">
+        </motion.p>
+        <motion.div
+          className="flex flex-row gap-2 justify-end pr-4"
+          variants={itemVariants}
+        >
           <Button className="w-fit bg-gradient-to-r from-[#49FFDB] to-[#00E5FF] text-black font-poppins font-medium text-sm rounded-lg">
             Reach Out
           </Button>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       <Divider orientation="vertical" />
-      <div className="flex flex-col gap-2 w-2/4">
-        <h1 className="text-base font-medium font-poppins mb-2 text-foreground-500">
+      <motion.div className="flex flex-col gap-2 w-2/4" variants={itemVariants}>
+        <motion.h1
+          className="text-base font-medium font-poppins mb-2 text-foreground-500"
+          variants={itemVariants}
+        >
           Top 10 FAQ
-        </h1>
-        <div className="flex flex-col gap-2 border-1 border-foreground-200 p-4 rounded-xl overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll">
-          {faq.map((item) => (
-            <Accordion key={item.question}>
-              <AccordionItem
-                key={item.question}
-                aria-label={item.question}
-                indicator={({ isOpen }) =>
-                  isOpen ? <FiMinus className="rotate-90" /> : <FiPlus />
-                }
-                title={
-                  <span className="font-medium font-poppins text-sm">
-                    {item.question}
-                  </span>
-                }
-                className="-my-1 border-b-1 border-foreground-200"
-              >
-                <p className="font-normal font-poppins -mt-4 text-sm">
-                  {item.answer}
-                </p>
-              </AccordionItem>
-            </Accordion>
+        </motion.h1>
+        <motion.div
+          className="flex flex-col gap-2 border-1 border-foreground-200 p-4 rounded-xl overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll"
+          variants={itemVariants}
+        >
+          {faq.map((item, index) => (
+            <motion.div
+              key={item.question}
+              variants={itemVariants}
+              custom={index}
+            >
+              <Accordion>
+                <AccordionItem
+                  aria-label={item.question}
+                  indicator={({ isOpen }) =>
+                    isOpen ? <FiMinus className="rotate-90" /> : <FiPlus />
+                  }
+                  title={
+                    <span className="font-medium font-poppins text-sm">
+                      {item.question}
+                    </span>
+                  }
+                  className="-my-1 border-b-1 border-foreground-200"
+                >
+                  <p className="font-normal font-poppins -mt-4 text-sm">
+                    {item.answer}
+                  </p>
+                </AccordionItem>
+              </Accordion>
+            </motion.div>
           ))}
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 

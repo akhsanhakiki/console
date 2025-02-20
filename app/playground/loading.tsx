@@ -4,9 +4,11 @@ import { Skeleton } from "@heroui/react";
 const Loading = () => {
   return (
     <div className="w-full h-full flex flex-col gap-4">
-      {/* Header Skeleton */}
+      {/* Static Header */}
       <div className="flex flex-row gap-2 items-center">
-        <Skeleton className="w-32 h-8 rounded-lg" />
+        <h1 className="text-xl font-semibold font-poppins text-foreground-900">
+          Playground
+        </h1>
       </div>
 
       <div className="flex flex-col gap-4 w-full h-full flex-grow">

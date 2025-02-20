@@ -16,7 +16,7 @@
 ├── /helpnSupport
 ├── /integration
 ├── /manage
-│ ├── /datatype
+│ ├── /doctype
 │ │ └── /components
 │ └── /pipeline
 │ ├── /components

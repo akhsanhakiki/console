@@ -7,6 +7,7 @@ import { useDisclosure } from "@heroui/react";
 import { usePlaygrounds } from "../hooks/usePlayground";
 import { useRouter } from "next/navigation";
 import ExtractFileIcon from "@/public/images/icons/extractFileIcon";
+import { motion } from "framer-motion";
 
 const pipelineCards = [
   {
@@ -160,17 +161,48 @@ const PipelineList = () => {
     };
   }, []);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        mass: 1,
+      },
+    },
+  };
+
   return (
     <>
-      <div className="flex flex-row items-center relative w-full">
+      <motion.div
+        className="flex flex-row items-center relative w-full"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
         {showLeftChevron && (
-          <button
+          <motion.button
             onClick={() => handleScroll("left")}
             className="p-2 hover:bg-foreground-100 rounded-full transition-opacity duration-300 ease-in-out"
             aria-label="Scroll left"
+            variants={cardVariants}
           >
             <ChevronIcon className="rotate-90 w-5 h-5 text-foreground-500" />
-          </button>
+          </motion.button>
         )}
 
         <div className="relative w-full overflow-hidden">
@@ -178,15 +210,23 @@ const PipelineList = () => {
             ref={scrollContainerRef}
             className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
           >
-            <div className="flex flex-nowrap gap-4">
+            <motion.div
+              className="flex flex-nowrap gap-4"
+              variants={containerVariants}
+            >
               {pipelineCards.map((card, index) => (
-                <div
+                <motion.div
                   key={index}
                   className="flex-none w-[320px] snap-start first:ml-0"
                   onClick={() => {
                     if (card.state === "active") {
                       handleNewPlayground(card.title);
                     }
+                  }}
+                  variants={cardVariants}
+                  whileHover={{
+                    scale: card.state === "active" ? 1.02 : 1,
+                    transition: { duration: 0.2 },
                   }}
                 >
                   <PipelineCard
@@ -195,22 +235,23 @@ const PipelineList = () => {
                     description={card.description}
                     state={card.state}
                   />
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </div>
 
         {showRightChevron && (
-          <button
+          <motion.button
             onClick={() => handleScroll("right")}
             className="p-2 hover:bg-foreground-100 rounded-full transition-opacity duration-300 ease-in-out"
             aria-label="Scroll right"
+            variants={cardVariants}
           >
             <ChevronIcon className="-rotate-90 w-5 h-5 text-foreground-500" />
-          </button>
+          </motion.button>
         )}
-      </div>
+      </motion.div>
 
       <PlaygroundModal
         isOpen={isOpen}

@@ -1,4 +1,4 @@
-import { Button } from "@heroui/react";
+"use client";
 import React, { useState } from "react";
 import DocumentLoader from "../modules/documentLoader";
 import PreProcess from "../modules/preProcess";

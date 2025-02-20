@@ -87,7 +87,7 @@ const navItems: NavItem[] = [
       },
       {
         name: "Doc Type",
-        href: "/manage/datatype",
+        href: "/manage/doctype",
         icon: DocTypeIconOut,
         activeIcon: DocTypeIcon,
       },
