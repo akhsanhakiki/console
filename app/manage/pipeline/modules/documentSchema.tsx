@@ -131,8 +131,19 @@ const DocumentSchema = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-row h-[calc(100vh-170px)] gap-2">
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-row gap-2 items-center">
+          <MdTune className="text-2xl w-5 h-5" />
+          <h1 className="text-medium font-semibold text-foreground-900 font-poppins">
+            Document Schema
+          </h1>
+        </div>
+        <p className="text-sm text-foreground-600 font-poppins">
+          Configure the document schema of the pipeline
+        </p>
+      </div>
+      <div className="flex flex-row h-[calc(100vh-240px)] gap-2">
         <div className="flex flex-col w-full border-1 border-foreground-200 rounded-lg overflow-hidden">
           <DocumentViewer
             pageImage={pageImage}
