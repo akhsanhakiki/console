@@ -187,7 +187,7 @@ const hnsContent = () => {
           email, or phone—we're here to assist you!
         </motion.p>
         <motion.div
-          className="flex flex-row gap-2 justify-end pr-4"
+          className="flex flex-row gap-2 justify-end"
           variants={itemVariants}
         >
           <Button className="w-fit bg-gradient-to-r from-[#49FFDB] to-[#00E5FF] text-black font-poppins font-medium text-sm rounded-lg">
@@ -204,7 +204,7 @@ const hnsContent = () => {
           Top 10 FAQ
         </motion.h1>
         <motion.div
-          className="flex flex-col gap-2 border-1 border-foreground-200 p-4 rounded-xl overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll"
+          className="flex flex-col gap-2 border-1 border-foreground-200 p-3 rounded-xl overflow-y-auto h-[calc(100vh-10rem)] overflow-scroll"
           variants={itemVariants}
         >
           {faq.map((item, index) => (

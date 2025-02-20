@@ -14,51 +14,51 @@ const LoadingComponent = () => (
 const moduleComponents = {
   "/": dynamic(() => import("./dashboard/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/dashboard": dynamic(() => import("./dashboard/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/extract": dynamic(() => import("./playground/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/manage/schema": dynamic(() => import("./manage/schema/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/manage/pipeline": dynamic(() => import("./manage/pipeline/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/manage/doctype": dynamic(() => import("./manage/doctype/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/composer": dynamic(() => import("./composer/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/integration": dynamic(() => import("./integration/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/settings": dynamic(() => import("./settings/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/documentation": dynamic(() => import("./documentation/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/changeLog": dynamic(() => import("./changeLog/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
   "/helpnSupport": dynamic(() => import("./helpnSupport/page"), {
     loading: LoadingComponent,
-    ssr: false,
+    ssr: true,
   }),
 };
 
