@@ -61,27 +61,27 @@ const SortableField: React.FC<SortableFieldProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-white rounded-lg p-4 mb-2 shadow-sm border border-gray-200"
+      className="bg-content1 rounded-lg p-4 mb-2 shadow-sm border border-default-200"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <div {...attributes} {...listeners} className="cursor-move">
-          <MdDragIndicator className="text-gray-400" />
+          <MdDragIndicator className="text-default-400 w-5 h-5" />
         </div>
-        <div className="flex-1 space-y-2">
-          <div className="flex gap-2">
+        <div className="flex-1 space-y-3">
+          <div className="flex gap-3">
             <input
               type="text"
               placeholder="Field name"
               value={field.name}
               onChange={(e) => onChange(field.id, { name: e.target.value })}
-              className="flex-1 px-2 py-1 border rounded"
+              className="flex-1 px-3 py-1.5 bg-default-100 border-default-200 rounded-lg text-default-700 placeholder:text-default-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
             <select
               value={field.type}
               onChange={(e) =>
                 onChange(field.id, { type: e.target.value as SchemaDataType })
               }
-              className="px-2 py-1 border rounded"
+              className="px-3 py-1.5 bg-default-100 border border-default-200 rounded-lg text-default-700 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               {dataTypes.map((type) => (
                 <option key={type} value={type}>
@@ -97,26 +97,26 @@ const SortableField: React.FC<SortableFieldProps> = ({
             onChange={(e) =>
               onChange(field.id, { description: e.target.value })
             }
-            className="w-full px-2 py-1 border rounded"
+            className="w-full px-3 py-1.5 bg-default-100 border border-default-200 rounded-lg text-default-700 placeholder:text-default-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
         <button
           onClick={() => onRemove(field.id)}
-          className="p-1 text-red-500 hover:bg-red-50 rounded"
+          className="p-2 text-danger hover:bg-danger-50 rounded-lg transition-colors"
         >
-          <MdDelete />
+          <MdDelete className="w-5 h-5" />
         </button>
       </div>
       {field.type === "object" && (
-        <div className="ml-8 mt-2">
+        <div className="ml-8 mt-3">
           <button
             onClick={() => onAddNested(field.id)}
-            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-primary hover:bg-primary-50 rounded-lg transition-colors"
           >
-            <MdAdd /> Add nested field
+            <MdAdd className="w-4 h-4" /> Add nested field
           </button>
           {field.children && field.children.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-3">
               <NestedSchemaEditor
                 schema={field.children}
                 onSchemaChange={(newChildren) =>
@@ -252,15 +252,15 @@ const SchemaEditor: React.FC<SchemaEditorProps> = ({
   return (
     <div className="w-full">
       {schema.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <p className="text-gray-500 mb-4">
+        <div className="text-center py-8 bg-default-50 rounded-xl border-2 border-dashed border-default-200">
+          <p className="text-default-500 mb-4">
             Generate your own schema to match with your use cases
           </p>
           <button
             onClick={handleAddField}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 mx-auto"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors mx-auto"
           >
-            <MdAdd /> Add Field
+            <MdAdd className="w-5 h-5" /> Add Field
           </button>
         </div>
       ) : (
@@ -323,9 +323,9 @@ const SchemaEditor: React.FC<SchemaEditorProps> = ({
           </DndContext>
           <button
             onClick={handleAddField}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
           >
-            <MdAdd /> Add Field
+            <MdAdd className="w-5 h-5" /> Add Field
           </button>
         </>
       )}
