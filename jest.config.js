@@ -10,6 +10,10 @@ const customJestConfig = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
+  transformIgnorePatterns: ["/node_modules/(?!(canvas)/)"],
+  testEnvironmentOptions: {
+    customExportConditions: [""],
+  },
 };
 
 module.exports = createJestConfig(customJestConfig);

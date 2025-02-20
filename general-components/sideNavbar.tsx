@@ -254,6 +254,7 @@ const SideNavbar = () => {
 
   return (
     <div
+      data-testid="sidebar-container"
       className={clsx(
         "flex flex-col h-full bg-background border-r border-foreground-200 transition-[width] duration-200 ease-in-out",
         {
