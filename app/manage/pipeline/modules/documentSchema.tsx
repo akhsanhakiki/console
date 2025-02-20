@@ -11,6 +11,7 @@ import {
   Rectangle,
   Token,
   TableColumn,
+  FixedField,
 } from "../components/documentSchema/types";
 
 const DocumentSchema = () => {
@@ -28,6 +29,10 @@ const DocumentSchema = () => {
   );
   const [tableColumns, setTableColumns] = useState<TableColumn[]>([]);
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
+  const [fixedFields, setFixedFields] = useState<FixedField[]>([]);
+  const [drawingForFieldId, setDrawingForFieldId] = useState<string | null>(
+    null
+  );
 
   const {
     numPages,
@@ -52,6 +57,7 @@ const DocumentSchema = () => {
     setIsEditingTableHeader(false);
     setIsEditingTableEnd(false);
     setIsEditingTableFooter(false);
+    setFixedFields([]);
   }, [currentPage]);
 
   // Handle table header selection
@@ -113,12 +119,50 @@ const DocumentSchema = () => {
     scale,
   });
 
-  // Handle mouse up for table-related rectangles
+  // Handle mouse up for table-related rectangles and fixed fields
   const handleMouseUp = () => {
     if (currentRect) {
       if (isEditingTableHeader || isEditingTableEnd || isEditingTableFooter) {
         // For table-related rectangles, bypass the rectangle overlap check
         handleTableHeaderSelection(currentRect);
+        setIsDrawing(false);
+        setCurrentRect(null);
+      } else if (drawingForFieldId) {
+        // For fixed field example value selection
+        const tokensInBounds = tokens.filter((token) => {
+          const tokenX = token.bounding_box.x;
+          const tokenY = token.bounding_box.y;
+          return (
+            tokenX >= currentRect.normalizedX &&
+            tokenX <= currentRect.normalizedX + currentRect.normalizedWidth &&
+            tokenY >= currentRect.normalizedY &&
+            tokenY <= currentRect.normalizedY + currentRect.normalizedHeight
+          );
+        });
+
+        if (tokensInBounds.length > 0) {
+          const field = fixedFields.find((f) => f.id === drawingForFieldId);
+          if (field) {
+            setFixedFields(
+              fixedFields.map((f) =>
+                f.id === drawingForFieldId
+                  ? {
+                      ...f,
+                      exampleValue: tokensInBounds
+                        .map((token) => token.text)
+                        .join(" "),
+                      tokens: tokensInBounds.map((token) => ({
+                        text: token.text,
+                        confidence: token.confidence,
+                      })),
+                    }
+                  : f
+              )
+            );
+          }
+        }
+
+        setDrawingForFieldId(null);
         setIsDrawing(false);
         setCurrentRect(null);
       } else {
@@ -177,6 +221,8 @@ const DocumentSchema = () => {
             tableEndRect={tableEndRect}
             tableFooterRect={tableFooterRect}
             selectedColumnId={selectedColumnId}
+            fixedFields={fixedFields}
+            drawingForFieldId={drawingForFieldId}
           />
           <NavigationFooter
             currentPage={currentPage}
@@ -218,6 +264,10 @@ const DocumentSchema = () => {
           setTableColumns={setTableColumns}
           selectedColumnId={selectedColumnId}
           setSelectedColumnId={setSelectedColumnId}
+          fixedFields={fixedFields}
+          setFixedFields={setFixedFields}
+          drawingForFieldId={drawingForFieldId}
+          setDrawingForFieldId={setDrawingForFieldId}
         />
       </div>
     </div>

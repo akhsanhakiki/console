@@ -58,3 +58,14 @@ export interface TableColumnDrag {
   startX: number;
   initialWidth: number;
 }
+
+export interface FixedField {
+  id: string;
+  key: string;
+  description: string;
+  exampleValue: string;
+  tokens?: Array<{
+    text: string;
+    confidence: number;
+  }>;
+}

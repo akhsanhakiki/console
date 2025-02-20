@@ -6,6 +6,7 @@ import {
   StageSize,
   TableColumn,
   TableColumnDrag,
+  FixedField,
 } from "./types";
 import { KonvaRectangle } from "./KonvaRectangle";
 import DocSample from "@/public/sample/Ezdocs OCR Pages.json";
@@ -43,6 +44,8 @@ interface DocumentViewerProps {
   tableEndRect: Rectangle | null;
   tableFooterRect: Rectangle | null;
   selectedColumnId: string | null;
+  fixedFields: FixedField[];
+  drawingForFieldId: string | null;
 }
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
@@ -78,6 +81,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   tableEndRect,
   tableFooterRect,
   selectedColumnId,
+  fixedFields,
+  drawingForFieldId,
 }) => {
   const [hoveredToken, setHoveredToken] = React.useState<Token | null>(null);
   const [columnDrag, setColumnDrag] = useState<TableColumnDrag | null>(null);
@@ -258,7 +263,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     <div
       ref={stageRef}
       className={`relative flex-1 select-none bg-foreground-100 ${
-        isEditingTableHeader || isEditingTableEnd || isEditingTableFooter
+        isEditingTableHeader ||
+        isEditingTableEnd ||
+        isEditingTableFooter ||
+        drawingForFieldId
           ? "table-drawing"
           : ""
       }`}
@@ -267,6 +275,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         (isEditingTableHeader ||
           isEditingTableEnd ||
           isEditingTableFooter ||
+          drawingForFieldId ||
           !isDrawing)
           ? handleMouseDown
           : undefined
@@ -276,6 +285,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         (isEditingTableHeader ||
           isEditingTableEnd ||
           isEditingTableFooter ||
+          drawingForFieldId ||
           !isDrawing)
           ? handleMouseMove
           : undefined
@@ -285,6 +295,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         (isEditingTableHeader ||
           isEditingTableEnd ||
           isEditingTableFooter ||
+          drawingForFieldId ||
           !isDrawing)
           ? handleMouseUp
           : undefined
@@ -373,9 +384,9 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                               : isHovered
                                 ? "#0066FFB0"
                                 : "#0066FF40"
-                            : "#0066FF80"
+                            : "transparent"
                         }
-                        strokeWidth={isSelected || isHovered ? 2 : 1.5}
+                        strokeWidth={isSelected || isHovered ? 2 : 0}
                         fill={
                           isSelectingToken
                             ? isSelected
@@ -618,23 +629,27 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       width={currentRect.normalizedWidth * stageSize.width}
                       height={currentRect.normalizedHeight * stageSize.height}
                       stroke={
-                        isEditingTableHeader
+                        drawingForFieldId
                           ? "#0066FF"
-                          : isEditingTableEnd
-                            ? "#FF6B00"
-                            : isEditingTableFooter
-                              ? "#00B341"
-                              : "#0066FF80"
+                          : isEditingTableHeader
+                            ? "#0066FF"
+                            : isEditingTableEnd
+                              ? "#FF6B00"
+                              : isEditingTableFooter
+                                ? "#00B341"
+                                : "#0066FF80"
                       }
                       strokeWidth={2}
                       fill={
-                        isEditingTableHeader
+                        drawingForFieldId
                           ? "rgba(0, 102, 255, 0.1)"
-                          : isEditingTableEnd
-                            ? "rgba(255, 107, 0, 0.1)"
-                            : isEditingTableFooter
-                              ? "rgba(0, 179, 65, 0.1)"
-                              : "transparent"
+                          : isEditingTableHeader
+                            ? "rgba(0, 102, 255, 0.1)"
+                            : isEditingTableEnd
+                              ? "rgba(255, 107, 0, 0.1)"
+                              : isEditingTableFooter
+                                ? "rgba(0, 179, 65, 0.1)"
+                                : "transparent"
                       }
                     />
                   )}
