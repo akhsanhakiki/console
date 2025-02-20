@@ -36,7 +36,7 @@ import DocTypeIcon from "@/public/images/icons/docTypeIcon";
 import helpnsupportIcon from "@/public/images/icons/helpnsupportIcon";
 import changeLogIconOut from "@/public/images/icons/changeLogIconOut";
 import changeLogIcon from "@/public/images/icons/changeLogIcon";
-
+import { motion } from "framer-motion";
 // Import SVG icons with proper typing
 interface IconType extends StaticImageData {
   src: string;
@@ -45,18 +45,40 @@ interface IconType extends StaticImageData {
 }
 
 // Interface for navigation items structure
-interface NavItem {
+interface BaseNavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   activeIcon: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
+}
+
+interface RegularNavItem extends BaseNavItem {
+  type?: never;
   subItems?: {
     name: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
     activeIcon: React.ComponentType<{ className?: string }>;
   }[];
-  disabled?: boolean;
+}
+
+interface SeparatorItem {
+  type: "separator";
+  description: string;
+  name?: never;
+  href?: never;
+  icon?: never;
+  activeIcon?: never;
+  disabled?: never;
+  subItems?: never;
+}
+
+type NavItem = RegularNavItem | SeparatorItem;
+
+// Add this helper function before the component
+function isRegularNavItem(item: NavItem): item is RegularNavItem {
+  return !item.type;
 }
 
 // Navigation items configuration
@@ -100,20 +122,6 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Composer",
-    href: "/composer",
-    icon: composerIconOut,
-    activeIcon: composerIcon,
-    disabled: true,
-  },
-  {
-    name: "Integration",
-    href: "/integration",
-    icon: integrationIconOut,
-    activeIcon: integrationIcon,
-    disabled: true,
-  },
-  {
     name: "Settings",
     href: "/settings",
     icon: settingsIconOut,
@@ -137,10 +145,32 @@ const navItems: NavItem[] = [
     icon: helpnsupportIconOut,
     activeIcon: helpnsupportIcon,
   },
+  {
+    type: "separator",
+    description: "Coming Soon",
+  },
+  {
+    name: "Composer",
+    href: "/composer",
+    icon: composerIconOut,
+    activeIcon: composerIcon,
+    disabled: true,
+  },
+  {
+    name: "Integration",
+    href: "/integration",
+    icon: integrationIconOut,
+    activeIcon: integrationIcon,
+    disabled: true,
+  },
 ];
 
 // Add this helper function at the top of the component
-function isActiveLink(itemPath: string, currentPath: string) {
+function isActiveLink(
+  itemPath: string | undefined,
+  currentPath: string
+): boolean {
+  if (!itemPath) return false;
   if (currentPath === "/") {
     // When on root path, make Dashboard active
     return itemPath === "/dashboard";
@@ -291,39 +321,63 @@ const SideNavbar = () => {
       <nav className="flex-1 px-2">
         <div className="flex flex-col gap-2">
           {navItems.map((item) => {
-            const isActive = isActiveLink(item.href, pathname);
+            if (item.type === "separator") {
+              return (
+                <div key="separator" className="py-2 px-3">
+                  <div className="border-t border-foreground-200"></div>
+                  {(isExpanded && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="text-xs text-foreground-500 font-poppins mt-4 truncate"
+                    >
+                      {item.description}
+                    </motion.p>
+                  )) || (
+                    <p className="text-xs text-foreground-500 font-poppins mt-4 opacity-0 truncate">
+                      {"Exp"}
+                    </p>
+                  )}
+                </div>
+              );
+            }
+
+            if (!isRegularNavItem(item)) return null;
+            const navItem = item as RegularNavItem;
+            const isActive = isActiveLink(navItem.href, pathname);
 
             return (
               <Tooltip
-                key={item.name}
-                content={item.disabled ? "Coming Soon" : item.name}
+                key={navItem.name}
+                content={navItem.disabled ? "Coming Soon" : navItem.name}
                 placement="right"
-                isDisabled={item.disabled ? false : isExpanded}
+                isDisabled={navItem.disabled ? false : isExpanded}
               >
                 <div className="flex flex-col">
-                  {item.subItems ? (
+                  {navItem.subItems ? (
                     <button
                       data-testid="manage-button"
                       className={clsx(
                         getMenuItemStyles(isActive),
                         "justify-between"
                       )}
-                      onClick={() => toggleSubItems(item.name)}
+                      onClick={() => toggleSubItems(navItem.name)}
                     >
                       <div className="flex items-center gap-2">
-                        {typeof item.icon === "function" ? (
+                        {typeof navItem.icon === "function" ? (
                           React.createElement(
-                            (expandedItem === item.name &&
+                            (expandedItem === navItem.name &&
                               !navItems.find(
                                 (nav) =>
                                   !nav.subItems &&
                                   isActiveLink(nav.href, pathname)
                               )) ||
-                              item.subItems?.some((subItem) =>
+                              navItem.subItems?.some((subItem) =>
                                 isActiveLink(subItem.href, pathname)
                               )
-                              ? item.activeIcon
-                              : item.icon,
+                              ? navItem.activeIcon
+                              : navItem.icon,
                             {
                               className: clsx(
                                 "flex-shrink-0 w-5 h-5 text-foreground-900"
@@ -332,8 +386,8 @@ const SideNavbar = () => {
                           )
                         ) : (
                           <Image
-                            src={item.icon}
-                            alt={`${item.name} icon`}
+                            src={navItem.icon}
+                            alt={`${navItem.name} icon`}
                             width={20}
                             height={20}
                             className={getIconStyles(isActive, isExpanded)}
@@ -343,50 +397,50 @@ const SideNavbar = () => {
                         )}
                         {isExpanded && (
                           <span className="transition-opacity duration-200 ease-in-out truncate font-poppins">
-                            {item.name}
+                            {navItem.name}
                           </span>
                         )}
                       </div>
                       {isExpanded && (
                         <ChevronDown
                           className={clsx("w-4 h-4 transition-transform", {
-                            "-rotate-180": expandedItem === item.name,
+                            "-rotate-180": expandedItem === navItem.name,
                           })}
                         />
                       )}
                     </button>
                   ) : (
                     <Link
-                      href={item.disabled ? "#" : item.href}
+                      href={navItem.disabled ? "#" : navItem.href}
                       className={clsx(getMenuItemStyles(isActive), {
-                        "opacity-50 cursor-not-allowed": item.disabled,
+                        "opacity-50 cursor-not-allowed": navItem.disabled,
                       })}
                       onClick={(e) => {
-                        if (item.disabled) {
+                        if (navItem.disabled) {
                           e.preventDefault();
                         }
                       }}
                     >
-                      {typeof item.icon === "function" ? (
+                      {typeof navItem.icon === "function" ? (
                         React.createElement(
-                          isActive ? item.activeIcon : item.icon,
+                          isActive ? navItem.activeIcon : navItem.icon,
                           {
                             className: clsx(
                               "flex-shrink-0 w-5 h-5 text-foreground-900",
                               {
-                                "opacity-50": item.disabled,
+                                "opacity-50": navItem.disabled,
                               }
                             ),
                           }
                         )
                       ) : (
                         <Image
-                          src={item.icon}
-                          alt={`${item.name} icon`}
+                          src={navItem.icon}
+                          alt={`${navItem.name} icon`}
                           width={20}
                           height={20}
                           className={clsx(getIconStyles(isActive, isExpanded), {
-                            "opacity-50": item.disabled,
+                            "opacity-50": navItem.disabled,
                           })}
                           style={{ width: "auto", height: "auto" }}
                           loading="eager"
@@ -396,10 +450,10 @@ const SideNavbar = () => {
                       {isExpanded && (
                         <span
                           className={clsx("flex-1 truncate font-poppins", {
-                            "opacity-50": item.disabled,
+                            "opacity-50": navItem.disabled,
                           })}
                         >
-                          {item.name}
+                          {navItem.name}
                         </span>
                       )}
                     </Link>
@@ -407,10 +461,10 @@ const SideNavbar = () => {
 
                   {/* Submenu items */}
                   {isExpanded &&
-                    item.subItems &&
-                    expandedItem === item.name && (
+                    navItem.subItems &&
+                    expandedItem === navItem.name && (
                       <div className="flex flex-col gap-1 mt-1 ml-6 transition-all duration-200 ease-in-out">
-                        {item.subItems.map((subItem) => {
+                        {navItem.subItems.map((subItem) => {
                           const isSubActive = isActiveLink(
                             subItem.href,
                             pathname
@@ -442,13 +496,17 @@ const SideNavbar = () => {
                                   alt={`${subItem.name} icon`}
                                   width={20}
                                   height={20}
-                                  className={getIconStyles(isSubActive, true)}
-                                  style={{ width: "auto", height: "auto" }}
+                                  className={clsx(
+                                    "flex-shrink-0",
+                                    isSubActive
+                                      ? "text-foreground-900"
+                                      : "text-foreground-600"
+                                  )}
                                   loading="eager"
                                   priority={true}
                                 />
                               )}
-                              <span className="truncate font-poppins">
+                              <span className="flex-1 truncate font-poppins">
                                 {subItem.name}
                               </span>
                             </Link>

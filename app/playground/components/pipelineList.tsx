@@ -224,10 +224,6 @@ const PipelineList = () => {
                     }
                   }}
                   variants={cardVariants}
-                  whileHover={{
-                    scale: card.state === "active" ? 1.02 : 1,
-                    transition: { duration: 0.2 },
-                  }}
                 >
                   <PipelineCard
                     title={card.title}
