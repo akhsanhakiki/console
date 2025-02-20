@@ -100,7 +100,11 @@ export const useRectangleState = ({
     (e: React.MouseEvent<HTMLDivElement>) => {
       const { x, y } = getRelativeCoordinates(e.clientX, e.clientY);
 
-      if (isPointInsideAnyRect(x, y)) return;
+      if (
+        !e.currentTarget.classList.contains("table-drawing") &&
+        isPointInsideAnyRect(x, y)
+      )
+        return;
 
       setSelectedRect(null);
       setIsDrawing(true);

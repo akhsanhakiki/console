@@ -16,15 +16,18 @@ import {
 const DocumentSchema = () => {
   const [isSelectingToken, setIsSelectingToken] = useState(false);
   const [isTableEnabled, setIsTableEnabled] = useState(false);
-  const [startOfTableToken, setStartOfTableToken] = useState<Token | null>(
-    null
-  );
-  const [endOfTableToken, setEndOfTableToken] = useState<Token | null>(null);
-  const [tableColumns, setTableColumns] = useState<TableColumn[]>([]);
   const [isEditingTableHeader, setIsEditingTableHeader] = useState(false);
+  const [isEditingTableEnd, setIsEditingTableEnd] = useState(false);
+  const [isEditingTableFooter, setIsEditingTableFooter] = useState(false);
   const [tableHeaderRect, setTableHeaderRect] = useState<Rectangle | null>(
     null
   );
+  const [tableEndRect, setTableEndRect] = useState<Rectangle | null>(null);
+  const [tableFooterRect, setTableFooterRect] = useState<Rectangle | null>(
+    null
+  );
+  const [tableColumns, setTableColumns] = useState<TableColumn[]>([]);
+  const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null);
 
   const {
     numPages,
@@ -40,51 +43,49 @@ const DocumentSchema = () => {
     containerRef,
   } = useDocumentState();
 
-  // Reset token selection when changing pages
+  // Reset table state when changing pages
   React.useEffect(() => {
-    setStartOfTableToken(null);
-    setEndOfTableToken(null);
-    setIsSelectingToken(false);
+    setTableHeaderRect(null);
+    setTableEndRect(null);
+    setTableFooterRect(null);
+    setTableColumns([]);
+    setIsEditingTableHeader(false);
+    setIsEditingTableEnd(false);
+    setIsEditingTableFooter(false);
   }, [currentPage]);
 
   // Handle table header selection
   const handleTableHeaderSelection = (rect: Rectangle) => {
-    if (!isEditingTableHeader) return;
-
-    const tokensInRect = tokens.filter((token) => {
-      const tokenCenterX = token.bounding_box.x + token.bounding_box.width / 2;
-      const tokenCenterY = token.bounding_box.y + token.bounding_box.height / 2;
-
-      return (
-        tokenCenterX >= rect.normalizedX &&
-        tokenCenterX <= rect.normalizedX + rect.normalizedWidth &&
-        tokenCenterY >= rect.normalizedY &&
-        tokenCenterY <= rect.normalizedY + rect.normalizedHeight
-      );
-    });
-
-    // Sort tokens by their x position to maintain left-to-right order
-    const sortedTokens = tokensInRect.sort(
-      (a, b) => a.bounding_box.x - b.bounding_box.x
-    );
-
-    // Calculate relative positions for each token within the header rect
-    const newColumns = sortedTokens.map((token, index) => {
-      const columnWidth = 1 / sortedTokens.length; // Divide header width equally
-      return {
-        id: token.id,
-        name: token.text,
-        token,
-        normalizedX: index * columnWidth,
-        normalizedWidth: columnWidth,
-      };
-    });
-
-    // Only update if we found tokens
-    if (newColumns.length > 0) {
-      setTableColumns(newColumns);
-      setTableHeaderRect(rect);
+    if (isEditingTableHeader) {
+      const updatedRect = { ...rect, type: "table-header" as const };
+      setTableHeaderRect(updatedRect);
       setIsEditingTableHeader(false);
+    } else if (isEditingTableEnd) {
+      // When selecting table end, detect tokens within the boundary
+      const updatedRect = { ...rect, type: "table-end" as const };
+      const tokensInBounds = tokens.filter((token) => {
+        const tokenX = token.bounding_box.x;
+        const tokenY = token.bounding_box.y;
+        return (
+          tokenX >= updatedRect.normalizedX &&
+          tokenX <= updatedRect.normalizedX + updatedRect.normalizedWidth &&
+          tokenY >= updatedRect.normalizedY &&
+          tokenY <= updatedRect.normalizedY + updatedRect.normalizedHeight
+        );
+      });
+
+      setTableEndRect({
+        ...updatedRect,
+        tokens: tokensInBounds.map((token) => ({
+          text: token.text,
+          confidence: token.confidence,
+        })),
+      });
+      setIsEditingTableEnd(false);
+    } else if (isEditingTableFooter) {
+      const updatedRect = { ...rect, type: "page-footer" as const };
+      setTableFooterRect(updatedRect);
+      setIsEditingTableFooter(false);
     }
   };
 
@@ -112,45 +113,27 @@ const DocumentSchema = () => {
     scale,
   });
 
-  // Custom handleMouseUp that prevents adding rectangles when editing table header
-  const handleMouseUp = React.useCallback(() => {
-    if (isDrawing && currentRect) {
-      if (isEditingTableHeader) {
+  // Handle mouse up for table-related rectangles
+  const handleMouseUp = () => {
+    if (currentRect) {
+      if (isEditingTableHeader || isEditingTableEnd || isEditingTableFooter) {
+        // For table-related rectangles, bypass the rectangle overlap check
         handleTableHeaderSelection(currentRect);
         setIsDrawing(false);
         setCurrentRect(null);
       } else {
+        // For normal rectangles, use the base handler
         baseHandleMouseUp();
       }
     } else {
       baseHandleMouseUp();
     }
-  }, [
-    isDrawing,
-    currentRect,
-    isEditingTableHeader,
-    baseHandleMouseUp,
-    handleTableHeaderSelection,
-  ]);
+  };
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Document Schema Header */}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-row gap-2 items-center">
-          <MdTune className="text-2xl w-5 h-5" />
-          <h1 className="text-medium font-bold">
-            Document schema configuration
-          </h1>
-        </div>
-        <p className="text-sm text-gray-500">
-          Configure the document schema of the pipeline
-        </p>
-      </div>
-
-      {/* Image Viewer and Editor Section */}
-      <div className="flex flex-row h-[calc(100vh-240px)]">
-        <div className="flex flex-col w-full">
+    <div className="flex flex-col h-full">
+      <div className="flex flex-row h-[calc(100vh-170px)] gap-2">
+        <div className="flex flex-col w-full border-1 border-foreground-200 rounded-lg overflow-hidden">
           <DocumentViewer
             pageImage={pageImage}
             stageSize={stageSize}
@@ -171,22 +154,18 @@ const DocumentSchema = () => {
             handleRectChange={handleRectChange}
             setSelectedRect={setSelectedRect}
             isSelectingToken={isSelectingToken}
-            selectedToken={startOfTableToken || endOfTableToken}
-            setSelectedToken={(token) => {
-              if (isSelectingToken) {
-                if (!startOfTableToken) {
-                  setStartOfTableToken(token);
-                } else if (!endOfTableToken) {
-                  setEndOfTableToken(token);
-                }
-                setIsSelectingToken(false);
-              }
-            }}
+            selectedToken={null}
+            setSelectedToken={() => {}}
             onRectangleComplete={handleTableHeaderSelection}
             isEditingTableHeader={isEditingTableHeader}
             tableHeaderRect={tableHeaderRect}
             tableColumns={tableColumns}
             setTableColumns={setTableColumns}
+            isEditingTableEnd={isEditingTableEnd}
+            isEditingTableFooter={isEditingTableFooter}
+            tableEndRect={tableEndRect}
+            tableFooterRect={tableFooterRect}
+            selectedColumnId={selectedColumnId}
           />
           <NavigationFooter
             currentPage={currentPage}
@@ -212,16 +191,22 @@ const DocumentSchema = () => {
           setIsSelectingToken={setIsSelectingToken}
           isTableEnabled={isTableEnabled}
           setIsTableEnabled={setIsTableEnabled}
-          startOfTableToken={startOfTableToken}
-          setStartOfTableToken={setStartOfTableToken}
-          endOfTableToken={endOfTableToken}
-          setEndOfTableToken={setEndOfTableToken}
-          tableColumns={tableColumns}
-          setTableColumns={setTableColumns}
           isEditingTableHeader={isEditingTableHeader}
           setIsEditingTableHeader={setIsEditingTableHeader}
+          isEditingTableEnd={isEditingTableEnd}
+          setIsEditingTableEnd={setIsEditingTableEnd}
+          isEditingTableFooter={isEditingTableFooter}
+          setIsEditingTableFooter={setIsEditingTableFooter}
           tableHeaderRect={tableHeaderRect}
           setTableHeaderRect={setTableHeaderRect}
+          tableEndRect={tableEndRect}
+          setTableEndRect={setTableEndRect}
+          tableFooterRect={tableFooterRect}
+          setTableFooterRect={setTableFooterRect}
+          tableColumns={tableColumns}
+          setTableColumns={setTableColumns}
+          selectedColumnId={selectedColumnId}
+          setSelectedColumnId={setSelectedColumnId}
         />
       </div>
     </div>

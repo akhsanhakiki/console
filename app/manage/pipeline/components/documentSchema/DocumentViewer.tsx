@@ -38,6 +38,11 @@ interface DocumentViewerProps {
   tableHeaderRect: Rectangle | null;
   tableColumns: TableColumn[];
   setTableColumns: (columns: TableColumn[]) => void;
+  isEditingTableEnd: boolean;
+  isEditingTableFooter: boolean;
+  tableEndRect: Rectangle | null;
+  tableFooterRect: Rectangle | null;
+  selectedColumnId: string | null;
 }
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
@@ -68,6 +73,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   tableHeaderRect,
   tableColumns,
   setTableColumns,
+  isEditingTableEnd,
+  isEditingTableFooter,
+  tableEndRect,
+  tableFooterRect,
+  selectedColumnId,
 }) => {
   const [hoveredToken, setHoveredToken] = React.useState<Token | null>(null);
   const [columnDrag, setColumnDrag] = useState<TableColumnDrag | null>(null);
@@ -76,7 +86,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   );
 
   const handleRectComplete = () => {
-    if (currentRect && onRectangleComplete && isEditingTableHeader) {
+    if (currentRect && onRectangleComplete) {
       onRectangleComplete(currentRect);
     }
   };
@@ -87,6 +97,54 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [isDrawing, currentRect]);
 
+  const getRectangleStyle = (rect: Rectangle) => {
+    switch (rect.type) {
+      case "table-header":
+        return {
+          stroke: "#0066FF",
+          fill: "rgba(0, 102, 255, 0.1)",
+        };
+      case "table-end":
+        return {
+          stroke: "#FF6B00",
+          fill: "rgba(255, 107, 0, 0.1)",
+        };
+      case "page-footer":
+        return {
+          stroke: "#00B341",
+          fill: "rgba(0, 179, 65, 0.1)",
+        };
+      default:
+        return {
+          stroke: "#0066FF80",
+          fill: "transparent",
+        };
+    }
+  };
+
+  // Function to calculate column coordinates
+  const getColumnCoordinates = (column: TableColumn, index: number) => {
+    if (!tableHeaderRect || !tableEndRect) return null;
+
+    const headerX = tableHeaderRect.normalizedX * stageSize.width;
+    const headerY = tableHeaderRect.normalizedY * stageSize.height;
+    const headerWidth = tableHeaderRect.normalizedWidth * stageSize.width;
+    const endY = tableEndRect.normalizedY * stageSize.height;
+
+    // Calculate column position relative to header
+    const columnX = headerX + column.normalizedX * headerWidth;
+    const columnWidth = column.normalizedWidth * headerWidth;
+    const columnHeight = endY - headerY;
+
+    return {
+      x: columnX,
+      y: headerY,
+      width: columnWidth,
+      height: columnHeight,
+    };
+  };
+
+  // Handle column resizing
   const handleColumnResize = (e: MouseEvent) => {
     if (!columnDrag || !tableHeaderRect || !stageRef.current) return;
 
@@ -94,7 +152,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) / stageSize.width;
+    const headerX = tableHeaderRect.normalizedX * stageSize.width;
+    const headerWidth = tableHeaderRect.normalizedWidth * stageSize.width;
+
+    // Calculate mouse position relative to header
+    const mouseX = (e.clientX - rect.left - headerX) / headerWidth;
     const deltaX = mouseX - columnDrag.startX;
 
     // Find the current column
@@ -116,8 +178,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
     // Convert minimum width from pixels to normalized width
     const minWidthPx = 50;
-    const tableWidthPx = tableHeaderRect.normalizedWidth * stageSize.width;
-    const minWidth = minWidthPx / tableWidthPx;
+    const minWidth = minWidthPx / headerWidth;
 
     // Calculate maximum width leaving space for other columns at minimum width
     const maxWidth = 1 - minWidth * (tableColumns.length - 1);
@@ -196,19 +257,35 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   return (
     <div
       ref={stageRef}
-      className="relative flex-1 select-none bg-foreground-100"
+      className={`relative flex-1 select-none bg-foreground-100 ${
+        isEditingTableHeader || isEditingTableEnd || isEditingTableFooter
+          ? "table-drawing"
+          : ""
+      }`}
       onMouseDown={
-        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+        !isSelectingToken &&
+        (isEditingTableHeader ||
+          isEditingTableEnd ||
+          isEditingTableFooter ||
+          !isDrawing)
           ? handleMouseDown
           : undefined
       }
       onMouseMove={
-        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+        !isSelectingToken &&
+        (isEditingTableHeader ||
+          isEditingTableEnd ||
+          isEditingTableFooter ||
+          !isDrawing)
           ? handleMouseMove
           : undefined
       }
       onMouseUp={
-        !isSelectingToken && (isEditingTableHeader || !isDrawing)
+        !isSelectingToken &&
+        (isEditingTableHeader ||
+          isEditingTableEnd ||
+          isEditingTableFooter ||
+          !isDrawing)
           ? handleMouseUp
           : undefined
       }
@@ -259,7 +336,8 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                     height={stageSize.height}
                     imageSmoothingEnabled={true}
                   />
-                  {/* OCR Tokens */}
+
+                  {/* Tokens */}
                   {tokens.map((token) => {
                     const currentPageData = DocSample[currentPage - 1];
                     const docWidth = currentPageData.dimensions?.width;
@@ -335,6 +413,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       />
                     );
                   })}
+
                   {/* User drawn Rectangles */}
                   {rectangles
                     .filter((rect) => rect.pageNumber === currentPage)
@@ -361,6 +440,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         />
                       );
                     })}
+
                   {/* Table Header Rectangle */}
                   {tableHeaderRect &&
                     tableHeaderRect.pageNumber === currentPage && (
@@ -373,80 +453,85 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         height={
                           tableHeaderRect.normalizedHeight * stageSize.height
                         }
-                        stroke="#00C853"
+                        {...getRectangleStyle(tableHeaderRect)}
                         strokeWidth={2}
-                        dash={[5, 5]}
                       />
                     )}
-                  {/* Current drawing rectangle */}
-                  {currentRect && (
+
+                  {/* Table End Rectangle */}
+                  {tableEndRect && tableEndRect.pageNumber === currentPage && (
                     <Rect
-                      x={currentRect.normalizedX * stageSize.width}
-                      y={currentRect.normalizedY * stageSize.height}
-                      width={currentRect.normalizedWidth * stageSize.width}
-                      height={currentRect.normalizedHeight * stageSize.height}
-                      stroke="#00ff00"
+                      x={tableEndRect.normalizedX * stageSize.width}
+                      y={tableEndRect.normalizedY * stageSize.height}
+                      width={tableEndRect.normalizedWidth * stageSize.width}
+                      height={tableEndRect.normalizedHeight * stageSize.height}
+                      {...getRectangleStyle(tableEndRect)}
                       strokeWidth={2}
                     />
                   )}
-                  {/* Table Columns */}
-                  {tableHeaderRect &&
-                    tableColumns.map((column, index) => {
-                      if (index === tableColumns.length - 1) return null; // Don't draw after last column
 
-                      const headerX =
-                        tableHeaderRect.normalizedX * stageSize.width;
-                      const headerY =
-                        tableHeaderRect.normalizedY * stageSize.height;
-                      const columnX =
-                        headerX +
-                        column.normalizedX *
-                          tableHeaderRect.normalizedWidth *
-                          stageSize.width;
-                      const columnWidth =
-                        column.normalizedWidth *
-                        tableHeaderRect.normalizedWidth *
-                        stageSize.width;
-                      const columnHeight = stageSize.height - headerY;
+                  {/* Table Footer Rectangle */}
+                  {tableFooterRect &&
+                    tableFooterRect.pageNumber === currentPage && (
+                      <Rect
+                        x={tableFooterRect.normalizedX * stageSize.width}
+                        y={tableFooterRect.normalizedY * stageSize.height}
+                        width={
+                          tableFooterRect.normalizedWidth * stageSize.width
+                        }
+                        height={
+                          tableFooterRect.normalizedHeight * stageSize.height
+                        }
+                        {...getRectangleStyle({
+                          ...tableFooterRect,
+                          type: "page-footer",
+                        })}
+                        strokeWidth={2}
+                      />
+                    )}
+
+                  {/* Table Columns - Only render if both header and end are defined */}
+                  {tableHeaderRect &&
+                    tableEndRect &&
+                    tableColumns.map((column, index) => {
+                      const coords = getColumnCoordinates(column, index);
+                      if (!coords) return null;
+
+                      const isSelected = selectedColumnId === column.id;
+                      const isHovered = hoveredColumnBorder === column.id;
 
                       return (
                         <React.Fragment key={column.id}>
+                          {/* Column background */}
                           <Rect
-                            x={columnX}
-                            y={headerY}
-                            width={columnWidth}
-                            height={columnHeight}
-                            stroke={
-                              hoveredColumnBorder === column.id
-                                ? "#0066FF"
-                                : "#0066FF80"
+                            x={coords.x}
+                            y={coords.y}
+                            width={coords.width}
+                            height={coords.height}
+                            fill={
+                              isSelected
+                                ? "rgba(0, 102, 255, 0.1)"
+                                : "transparent"
                             }
-                            strokeWidth={
-                              hoveredColumnBorder === column.id ? 2 : 1
-                            }
+                          />
+                          {/* Column border */}
+                          <Line
+                            points={[
+                              coords.x,
+                              coords.y,
+                              coords.x,
+                              coords.y + coords.height,
+                            ]}
+                            stroke={isHovered ? "#0066FF" : "#0066FF80"}
+                            strokeWidth={isHovered ? 2 : 1}
                             dash={[5, 5]}
-                            fill="transparent"
-                            onMouseEnter={(e) => {
-                              setHoveredColumnBorder(column.id);
-                              const stage = e.target.getStage();
-                              if (stage) {
-                                stage.container().style.cursor = "col-resize";
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              setHoveredColumnBorder(null);
-                              const stage = e.target.getStage();
-                              if (stage) {
-                                stage.container().style.cursor = "default";
-                              }
-                            }}
                           />
                           {/* Right border for resizing */}
                           <Rect
-                            x={columnX + columnWidth - 4}
-                            y={headerY}
+                            x={coords.x + coords.width - 4}
+                            y={coords.y}
                             width={8}
-                            height={columnHeight}
+                            height={coords.height}
                             fill="transparent"
                             onMouseEnter={(e) => {
                               setHoveredColumnBorder(column.id);
@@ -470,8 +555,15 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                               const rect = stage
                                 .container()
                                 .getBoundingClientRect();
+                              const headerX =
+                                tableHeaderRect.normalizedX * stageSize.width;
+                              const headerWidth =
+                                tableHeaderRect.normalizedWidth *
+                                stageSize.width;
                               const mouseX =
-                                (e.evt.clientX - rect.left) / stageSize.width;
+                                (e.evt.clientX - rect.left - headerX) /
+                                headerWidth;
+
                               setColumnDrag({
                                 columnId: column.id,
                                 startX: mouseX,
@@ -482,29 +574,68 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                         </React.Fragment>
                       );
                     })}
-                  {/* Last Column */}
-                  {tableHeaderRect && tableColumns.length > 0 && (
+
+                  {/* Last Column Border */}
+                  {tableHeaderRect &&
+                    tableEndRect &&
+                    tableColumns.length > 0 && (
+                      <>
+                        {/* Right border */}
+                        <Line
+                          points={[
+                            tableHeaderRect.normalizedX * stageSize.width +
+                              tableHeaderRect.normalizedWidth * stageSize.width,
+                            tableHeaderRect.normalizedY * stageSize.height,
+                            tableHeaderRect.normalizedX * stageSize.width +
+                              tableHeaderRect.normalizedWidth * stageSize.width,
+                            tableEndRect.normalizedY * stageSize.height,
+                          ]}
+                          stroke="#0066FF80"
+                          strokeWidth={1}
+                          dash={[5, 5]}
+                        />
+                        {/* Bottom border */}
+                        <Line
+                          points={[
+                            tableHeaderRect.normalizedX * stageSize.width,
+                            tableEndRect.normalizedY * stageSize.height,
+                            tableHeaderRect.normalizedX * stageSize.width +
+                              tableHeaderRect.normalizedWidth * stageSize.width,
+                            tableEndRect.normalizedY * stageSize.height,
+                          ]}
+                          stroke="#0066FF80"
+                          strokeWidth={1}
+                          dash={[5, 5]}
+                        />
+                      </>
+                    )}
+
+                  {/* Current Rectangle */}
+                  {isDrawing && currentRect && (
                     <Rect
-                      x={
-                        tableHeaderRect.normalizedX * stageSize.width +
-                        tableColumns[tableColumns.length - 1].normalizedX *
-                          tableHeaderRect.normalizedWidth *
-                          stageSize.width
+                      x={currentRect.normalizedX * stageSize.width}
+                      y={currentRect.normalizedY * stageSize.height}
+                      width={currentRect.normalizedWidth * stageSize.width}
+                      height={currentRect.normalizedHeight * stageSize.height}
+                      stroke={
+                        isEditingTableHeader
+                          ? "#0066FF"
+                          : isEditingTableEnd
+                            ? "#FF6B00"
+                            : isEditingTableFooter
+                              ? "#00B341"
+                              : "#0066FF80"
                       }
-                      y={tableHeaderRect.normalizedY * stageSize.height}
-                      width={
-                        tableColumns[tableColumns.length - 1].normalizedWidth *
-                        tableHeaderRect.normalizedWidth *
-                        stageSize.width
+                      strokeWidth={2}
+                      fill={
+                        isEditingTableHeader
+                          ? "rgba(0, 102, 255, 0.1)"
+                          : isEditingTableEnd
+                            ? "rgba(255, 107, 0, 0.1)"
+                            : isEditingTableFooter
+                              ? "rgba(0, 179, 65, 0.1)"
+                              : "transparent"
                       }
-                      height={
-                        stageSize.height -
-                        tableHeaderRect.normalizedY * stageSize.height
-                      }
-                      stroke="#0066FF80"
-                      strokeWidth={1}
-                      dash={[5, 5]}
-                      fill="transparent"
                     />
                   )}
                 </Layer>

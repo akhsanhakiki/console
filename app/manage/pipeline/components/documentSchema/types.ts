@@ -5,6 +5,7 @@ export interface Rectangle {
   normalizedWidth: number;
   normalizedHeight: number;
   pageNumber: number;
+  type?: "table-header" | "table-end" | "page-footer";
   tokens?: Array<{
     text: string;
     confidence: number;

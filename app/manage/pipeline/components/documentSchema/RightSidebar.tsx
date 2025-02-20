@@ -35,16 +35,22 @@ interface RightSidebarProps {
   setIsSelectingToken: (isSelecting: boolean) => void;
   isTableEnabled: boolean;
   setIsTableEnabled: (enabled: boolean) => void;
-  startOfTableToken: Token | null;
-  setStartOfTableToken: (token: Token | null) => void;
-  endOfTableToken: Token | null;
-  setEndOfTableToken: (token: Token | null) => void;
-  tableColumns: TableColumn[];
-  setTableColumns: (columns: TableColumn[]) => void;
   isEditingTableHeader: boolean;
   setIsEditingTableHeader: (editing: boolean) => void;
+  isEditingTableEnd: boolean;
+  setIsEditingTableEnd: (editing: boolean) => void;
+  isEditingTableFooter: boolean;
+  setIsEditingTableFooter: (editing: boolean) => void;
   tableHeaderRect: Rectangle | null;
   setTableHeaderRect: (rect: Rectangle | null) => void;
+  tableEndRect: Rectangle | null;
+  setTableEndRect: (rect: Rectangle | null) => void;
+  tableFooterRect: Rectangle | null;
+  setTableFooterRect: (rect: Rectangle | null) => void;
+  tableColumns: TableColumn[];
+  setTableColumns: (columns: TableColumn[]) => void;
+  selectedColumnId?: string | null;
+  setSelectedColumnId?: (id: string | null) => void;
 }
 
 export const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -62,16 +68,22 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   setIsSelectingToken,
   isTableEnabled,
   setIsTableEnabled,
-  startOfTableToken,
-  setStartOfTableToken,
-  endOfTableToken,
-  setEndOfTableToken,
-  tableColumns,
-  setTableColumns,
   isEditingTableHeader,
   setIsEditingTableHeader,
+  isEditingTableEnd,
+  setIsEditingTableEnd,
+  isEditingTableFooter,
+  setIsEditingTableFooter,
   tableHeaderRect,
   setTableHeaderRect,
+  tableEndRect,
+  setTableEndRect,
+  tableFooterRect,
+  setTableFooterRect,
+  tableColumns,
+  setTableColumns,
+  selectedColumnId,
+  setSelectedColumnId,
 }) => {
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState("");
@@ -88,24 +100,23 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
         bounding_box: { x: 0, y: 0, width: 0, height: 0 },
         confidence: 0,
       },
-      normalizedX: tableHeaderRect.normalizedX,
+      normalizedX: 0,
       normalizedWidth: 0,
     };
 
     // Calculate positions and widths for all columns
     const numColumns = tableColumns.length + 1;
-    const columnWidth = tableHeaderRect.normalizedWidth / numColumns; // Divide header width equally
+    const columnWidth = 1 / numColumns; // Each column takes equal portion of the total width (1.0)
 
     const updatedColumns = [
       ...tableColumns.map((col, index) => ({
         ...col,
-        normalizedX: tableHeaderRect.normalizedX + index * columnWidth,
+        normalizedX: index * columnWidth,
         normalizedWidth: columnWidth,
       })),
       {
         ...newColumn,
-        normalizedX:
-          tableHeaderRect.normalizedX + (numColumns - 1) * columnWidth,
+        normalizedX: (numColumns - 1) * columnWidth,
         normalizedWidth: columnWidth,
       },
     ];
@@ -115,7 +126,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   };
 
   return (
-    <div className="flex flex-col w-2/12 border-1 overflow-scroll">
+    <div className="flex flex-col w-3/12 rounded-lg border-1 overflow-scroll">
       {/* Document Info */}
       <div className="p-4 border-b">
         <div className="flex flex-col gap-3">
@@ -168,7 +179,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                       (DocSample[currentPage - 1]?.dimensions.width * scale ||
                         1);
                     return normalizedX >= 0 && normalizedX <= 1
-                      ? normalizedX.toFixed(6)
+                      ? normalizedX.toFixed(3)
                       : "-";
                   })()}
                 </div>
@@ -180,7 +191,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                       (DocSample[currentPage - 1]?.dimensions.height * scale ||
                         1);
                     return normalizedY >= 0 && normalizedY <= 1
-                      ? normalizedY.toFixed(6)
+                      ? normalizedY.toFixed(3)
                       : "-";
                   })()}
                 </div>
@@ -191,7 +202,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* Table annotations */}
-      <div className="p-4 ">
+      <div className="p-4">
         <div className="flex flex-col gap-3">
           <div className="flex flex-row items-center justify-start">
             <Checkbox
@@ -206,102 +217,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
 
           {isTableEnabled && (
             <>
-              <div className="flex flex-col w-full gap-1">
-                <span className="text-xs text-foreground-500 font-poppins w-full">
-                  Start of table
-                </span>
-                <div className="flex flex-row gap-2 w-full">
-                  <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-full items-center justify-between">
-                    {startOfTableToken ? (
-                      <>
-                        <div className="text-sm font-poppins truncate">
-                          {startOfTableToken.text}
-                        </div>
-                        <span
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setStartOfTableToken(null);
-                            setIsSelectingToken(false);
-                          }}
-                        >
-                          <FiX className="w-4 h-4" />
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-foreground-400">
-                        select a token
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    className={
-                      isSelectingToken && !startOfTableToken
-                        ? "bg-primary"
-                        : "bg-foreground-200"
-                    }
-                    size="sm"
-                    variant="solid"
-                    isIconOnly
-                    isDisabled={!!endOfTableToken}
-                    onPress={() => {
-                      if (!startOfTableToken) {
-                        setIsSelectingToken(true);
-                      }
-                    }}
-                  >
-                    <FiArrowRight />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col w-full gap-1">
-                <span className="text-xs text-foreground-500 font-poppins w-full">
-                  End of table
-                </span>
-                <div className="flex flex-row gap-2 w-full">
-                  <div className="flex flex-row text-sm font-normal font-poppins bg-foreground-100 px-2 py-1 rounded-md gap-1 w-full items-center justify-between">
-                    {endOfTableToken ? (
-                      <>
-                        <div className="text-sm font-poppins truncate">
-                          {endOfTableToken.text}
-                        </div>
-                        <span
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setEndOfTableToken(null);
-                            setIsSelectingToken(false);
-                          }}
-                        >
-                          <FiX className="w-4 h-4" />
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-foreground-400">
-                        select a token
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    className={
-                      isSelectingToken && !endOfTableToken
-                        ? "bg-primary"
-                        : "bg-foreground-200"
-                    }
-                    size="sm"
-                    variant="solid"
-                    isIconOnly
-                    isDisabled={!startOfTableToken || !!endOfTableToken}
-                    onPress={() => {
-                      if (!endOfTableToken && startOfTableToken) {
-                        setIsSelectingToken(true);
-                      }
-                    }}
-                  >
-                    <FiArrowRight />
-                  </Button>
-                </div>
-              </div>
-
+              {/* Table Header Section */}
               <div className="flex flex-col w-full gap-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-foreground-500 font-poppins w-full">
@@ -309,103 +225,285 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                   </span>
                   <Button
                     size="sm"
-                    variant="light"
+                    variant="solid"
+                    className={
+                      isEditingTableHeader ? "bg-primary" : "bg-foreground-200"
+                    }
                     onPress={() => {
-                      if (tableColumns.length > 0) {
+                      if (tableHeaderRect) {
                         // Clear table columns and rectangle when re-selecting
                         setTableColumns([]);
                         setTableHeaderRect(null);
                       }
                       setIsEditingTableHeader(!isEditingTableHeader);
                     }}
+                    isDisabled={isEditingTableEnd || isEditingTableFooter}
                   >
-                    {tableColumns.length > 0
+                    {tableHeaderRect
                       ? "Re-select"
                       : isEditingTableHeader
                         ? "Cancel"
                         : "Draw"}
                   </Button>
                 </div>
-                <ScrollShadow className="flex flex-col h-[calc(100vh-690px)]">
-                  <div className="flex flex-col gap-2 mt-2">
-                    {tableColumns.map((column) => (
-                      <div
-                        key={column.id}
-                        className="flex flex-col gap-1 bg-foreground-100 p-2 rounded-md"
-                      >
-                        {editingColumnId === column.id ? (
-                          <Input
-                            size="sm"
-                            placeholder="Column name"
-                            value={column.name}
-                            onChange={(e) => {
-                              const newColumns = tableColumns.map((c) =>
-                                c.id === column.id
-                                  ? { ...c, name: e.target.value }
-                                  : c
-                              );
-                              setTableColumns(newColumns);
-                            }}
-                            onBlur={() => setEditingColumnId(null)}
-                            autoFocus
-                          />
-                        ) : (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-poppins truncate flex-1">
-                              {column.name}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="light"
-                              isIconOnly
-                              onPress={() => setEditingColumnId(column.id)}
-                            >
-                              <FiEdit2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
-                          {tableHeaderRect && (
-                            <>
-                              <div className="flex justify-between">
-                                <span>X:</span>
-                                <span>
-                                  {(
-                                    tableHeaderRect.normalizedX +
-                                    column.normalizedX *
-                                      tableHeaderRect.normalizedWidth
-                                  ).toFixed(6)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Width:</span>
-                                <span>
-                                  {(
-                                    column.normalizedWidth *
-                                    tableHeaderRect.normalizedWidth
-                                  ).toFixed(6)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Y:</span>
-                                <span>
-                                  {tableHeaderRect.normalizedY.toFixed(6)}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Height:</span>
-                                <span>
-                                  {tableHeaderRect.normalizedHeight.toFixed(6)}
-                                </span>
-                              </div>
-                            </>
-                          )}
+                {tableHeaderRect && (
+                  <div className="flex flex-col gap-2 bg-foreground-50 p-2 rounded-md">
+                    <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
+                      <div className="flex justify-between">
+                        <span>X:</span>
+                        <span>{tableHeaderRect.normalizedX.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Y:</span>
+                        <span>{tableHeaderRect.normalizedY.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Width:</span>
+                        <span>
+                          {tableHeaderRect.normalizedWidth.toFixed(6)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Height:</span>
+                        <span>
+                          {tableHeaderRect.normalizedHeight.toFixed(6)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Table End Section */}
+              <div className="flex flex-col w-full gap-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-foreground-500 font-poppins w-full">
+                    End of table
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    className={
+                      isEditingTableEnd ? "bg-primary" : "bg-foreground-200"
+                    }
+                    onPress={() => {
+                      if (tableEndRect) {
+                        setTableEndRect(null);
+                      }
+                      setIsEditingTableEnd(!isEditingTableEnd);
+                    }}
+                    isDisabled={
+                      !tableHeaderRect ||
+                      isEditingTableHeader ||
+                      isEditingTableFooter
+                    }
+                  >
+                    {tableEndRect
+                      ? "Re-select"
+                      : isEditingTableEnd
+                        ? "Cancel"
+                        : "Draw"}
+                  </Button>
+                </div>
+                {tableEndRect && (
+                  <div className="flex flex-col gap-2 bg-foreground-50 p-2 rounded-md">
+                    <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
+                      <div className="flex justify-between">
+                        <span>X:</span>
+                        <span>{tableEndRect.normalizedX.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Y:</span>
+                        <span>{tableEndRect.normalizedY.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Width:</span>
+                        <span>{tableEndRect.normalizedWidth.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Height:</span>
+                        <span>{tableEndRect.normalizedHeight.toFixed(6)}</span>
+                      </div>
+                    </div>
+                    {tableEndRect.tokens && tableEndRect.tokens.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-foreground-500">
+                          Detected tokens:
+                        </span>
+                        <div className="text-sm font-mono bg-foreground-100 p-2 rounded">
+                          {tableEndRect.tokens.map((token, idx) => (
+                            <span key={idx}>{token.text} </span>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </ScrollShadow>
+                )}
               </div>
+
+              {/* Page Footer Section */}
+              <div className="flex flex-col w-full gap-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-foreground-500 font-poppins w-full">
+                    Page footer
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    className={
+                      isEditingTableFooter ? "bg-primary" : "bg-foreground-200"
+                    }
+                    onPress={() => {
+                      if (tableFooterRect) {
+                        setTableFooterRect(null);
+                      }
+                      setIsEditingTableFooter(!isEditingTableFooter);
+                    }}
+                    isDisabled={
+                      !tableEndRect || isEditingTableHeader || isEditingTableEnd
+                    }
+                  >
+                    {tableFooterRect
+                      ? "Re-select"
+                      : isEditingTableFooter
+                        ? "Cancel"
+                        : "Draw"}
+                  </Button>
+                </div>
+                {tableFooterRect && (
+                  <div className="flex flex-col gap-2 bg-foreground-50 p-2 rounded-md">
+                    <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
+                      <div className="flex justify-between">
+                        <span>X:</span>
+                        <span>{tableFooterRect.normalizedX.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Y:</span>
+                        <span>{tableFooterRect.normalizedY.toFixed(6)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Width:</span>
+                        <span>
+                          {tableFooterRect.normalizedWidth.toFixed(6)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Height:</span>
+                        <span>
+                          {tableFooterRect.normalizedHeight.toFixed(6)}
+                        </span>
+                      </div>
+                    </div>
+                    {tableFooterRect.tokens &&
+                      tableFooterRect.tokens.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-foreground-500">
+                            Detected tokens:
+                          </span>
+                          <div className="text-sm font-mono bg-foreground-100 p-2 rounded">
+                            {tableFooterRect.tokens.map((token, idx) => (
+                              <span key={idx}>{token.text} </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                )}
+              </div>
+
+              {/* Column Management - Only show after table end is defined */}
+              {tableHeaderRect && tableEndRect && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      size="sm"
+                      placeholder="Column name"
+                      value={newColumnName}
+                      onChange={(e) => setNewColumnName(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      className="bg-primary"
+                      isIconOnly
+                      onPress={handleAddColumn}
+                    >
+                      <FiPlus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <ScrollShadow className="flex flex-col h-[calc(100vh-690px)]">
+                    <div className="flex flex-col gap-2">
+                      {tableColumns.map((column) => (
+                        <div
+                          key={column.id}
+                          className={`flex flex-col gap-1 p-2 rounded-md cursor-pointer transition-colors ${
+                            selectedColumnId === column.id
+                              ? "bg-primary/10"
+                              : "bg-foreground-100 hover:bg-foreground-200"
+                          }`}
+                          onClick={() => {
+                            if (setSelectedColumnId) {
+                              setSelectedColumnId(
+                                selectedColumnId === column.id
+                                  ? null
+                                  : column.id
+                              );
+                            }
+                          }}
+                        >
+                          {editingColumnId === column.id ? (
+                            <Input
+                              size="sm"
+                              placeholder="Column name"
+                              value={column.name}
+                              onChange={(e) => {
+                                const newColumns = tableColumns.map((c) =>
+                                  c.id === column.id
+                                    ? { ...c, name: e.target.value }
+                                    : c
+                                );
+                                setTableColumns(newColumns);
+                              }}
+                              onBlur={() => setEditingColumnId(null)}
+                              autoFocus
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-poppins truncate flex-1">
+                                {column.name}
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="light"
+                                isIconOnly
+                                onPress={(e: any) => {
+                                  e.preventDefault();
+                                  setEditingColumnId(column.id);
+                                }}
+                              >
+                                <FiEdit2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-0.5 text-xs text-foreground-500 font-mono">
+                            <div className="flex justify-between">
+                              <span>X:</span>
+                              <span>{column.normalizedX.toFixed(6)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Width:</span>
+                              <span>{column.normalizedWidth.toFixed(6)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollShadow>
+                </div>
+              )}
             </>
           )}
         </div>

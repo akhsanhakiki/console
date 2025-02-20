@@ -50,11 +50,11 @@ const DocumentLoader = () => {
       <div className="flex flex-col gap-2">
         <div className="flex flex-row gap-2 items-center">
           <MdTune className="text-2xl w-5 h-5" />
-          <h1 className="text-medium font-bold">
+          <h1 className="text-medium font-semibold text-foreground-900 font-poppins">
             Document loader configuration
           </h1>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-foreground-600 font-poppins">
           Configure the document loader of the pipeline
         </p>
       </div>
@@ -63,7 +63,7 @@ const DocumentLoader = () => {
           <h1 className="text-sm font-medium font-poppins text-foreground-900">
             Base Document <span className="text-base text-red-500">*</span>
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-foreground-600 font-poppins">
             Upload the base document for annotation later in the pipeline.
           </p>
           <div className="flex flex-row gap-2 items-center">
@@ -82,7 +82,9 @@ const DocumentLoader = () => {
             >
               Upload
             </Button>
-            <p className="text-sm text-gray-500">{fileName}</p>
+            <p className="text-sm text-foreground-600 font-poppins">
+              {fileName}
+            </p>
           </div>
         </div>
         <Input
@@ -110,7 +112,7 @@ const DocumentLoader = () => {
                 <h1 className="text-sm font-medium font-poppins text-foreground-900">
                   Native PDF
                 </h1>
-                <p className="text-sm font-normal font-poppins text-gray-500">
+                <p className="text-sm font-normal font-poppins text-foreground-600">
                   A PDF with selectable text and preserved structure.
                 </p>
               </div>
@@ -120,7 +122,7 @@ const DocumentLoader = () => {
                 <h1 className="text-sm font-medium font-poppins text-foreground-900">
                   Image Based PDF
                 </h1>
-                <p className="text-sm font-normal font-poppins text-gray-500">
+                <p className="text-sm font-normal font-poppins text-foreground-600">
                   A PDF generated from scanned documents or photos, preserving
                   appearance but not allowing edits.
                 </p>
